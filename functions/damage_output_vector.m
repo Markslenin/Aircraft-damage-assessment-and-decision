@@ -1,11 +1,11 @@
 function y = damage_output_vector(z)
 %DAMAGE_OUTPUT_VECTOR Packed interface for Simulink interpreted function use.
-%   z = [x(12); u(nu); theta_d(12)]
+%   z = [x(12); u(4); theta_d(12)]
 
 z = z(:);
 
 if numel(z) < 28
-    error('damage_output_vector expects at least 28 elements: x(12), u(4), theta_d(12).');
+    error('damage_output_vector expects 28 elements: x(12), u(4), theta_d(12).');
 end
 
 x = z(1:12);

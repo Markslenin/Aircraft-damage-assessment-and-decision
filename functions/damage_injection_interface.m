@@ -1,40 +1,76 @@
 function [deltaF_b_N, deltaM_b_Nm, controlEffectiveness] = damage_injection_interface(x, u, theta_d)
-%DAMAGE_INJECTION_INTERFACE Placeholder online damage mapping interface.
+%DAMAGE_INJECTION_INTERFACE Map structured damage into force/moment deltas.
 %   Inputs:
-%     x        - state vector placeholder
-%     u        - control vector placeholder
-%     theta_d  - 12x1 damage parameter vector
+%     x        - 12x1 state vector [pn pe pd u v w phi theta psi p q r]
+%     u        - 4x1 control vector [de da dr throttle]
+%     theta_d  - 12x1 continuous damage vector, each element in [0, 1]
 %   Outputs:
-%     deltaF_b_N            - incremental body-axis forces [Fx;Fy;Fz]
-%     deltaM_b_Nm           - incremental body-axis moments [L;M;N]
-%     controlEffectiveness  - multiplicative control effectiveness placeholder
+%     deltaF_b_N           - body-axis damage-induced force delta [Fx;Fy;Fz]
+%     deltaM_b_Nm          - body-axis damage-induced moment delta [L;M;N]
+%     controlEffectiveness - [aileronEquivalent; elevator; rudder; thrust]
 
-if nargin < 3
+if nargin < 1 || isempty(x)
+    x = zeros(12, 1);
+end
+
+if nargin < 2 || isempty(u)
+    u = zeros(4, 1);
+end
+
+if nargin < 3 || isempty(theta_d)
     theta_d = zeros(12, 1);
 end
 
+x = reshape(x, [], 1);
+u = reshape(u, [], 1);
 theta_d = reshape(theta_d, [], 1);
 
 if numel(theta_d) ~= 12
     error('theta_d must be a 12x1 vector.');
 end
 
-deltaF_b_N = zeros(3, 1);
-deltaM_b_Nm = zeros(3, 1);
+damageParams = parse_damage_vector(theta_d);
+damageEffects = map_damage_to_aero_effects(damageParams, x, u);
+flightCondition = build_flight_condition(x, u);
+Pcfg = evalin('base', 'P');
 
-controlEffectiveness = ones(size(u));
-if ~isempty(u)
-    nEff = min(numel(u), 4);
-    controlEffectiveness(1:nEff) = max(0, 1 - theta_d(1:nEff));
+qbar = flightCondition.dynamicPressure_Pa;
+S = Pcfg.aircraft.wingArea;
+b = Pcfg.aircraft.span;
+cbar = Pcfg.aircraft.meanAerodynamicChord;
+alpha = flightCondition.alpha_rad;
+
+CLref = Pcfg.aero.CL0 + Pcfg.aero.CLalpha * alpha;
+CDref = Pcfg.aero.CD0 + Pcfg.aero.CDk * CLref^2;
+Lref = qbar * S * CLref;
+Dref = qbar * S * CDref;
+
+deltaLift = (damageEffects.liftScale - 1.0) * Lref;
+deltaDrag = (damageEffects.dragScale - 1.0) * Dref;
+deltaSideForce = qbar * S * damageEffects.sideForceCoeffBias;
+
+deltaFx = -deltaDrag * cos(alpha) + deltaLift * sin(alpha);
+deltaFy = deltaSideForce;
+deltaFz = -deltaLift * cos(alpha) - deltaDrag * sin(alpha);
+
+deltaF_b_N = [deltaFx; deltaFy; deltaFz];
+deltaM_b_Nm = [ ...
+    damageEffects.rollMomentBias; ...
+    damageEffects.pitchMomentBias; ...
+    damageEffects.yawMomentBias];
+
+controlEffectiveness = [ ...
+    damageEffects.aileronEffScale; ...
+    damageEffects.elevatorEffScale; ...
+    damageEffects.rudderEffScale; ...
+    damageEffects.thrustEffScale];
+
+% Keep dimensions consistent even if qbar is very small.
+if ~isfinite(qbar)
+    deltaF_b_N = zeros(3, 1);
+    deltaM_b_Nm = zeros(3, 1);
 end
 
-% Simple placeholders reserving the first 6 damage states for net force/moment bias.
-deltaF_b_N = theta_d(5:7);
-deltaM_b_Nm = theta_d(8:10);
-
-% Remaining terms are reserved for future structural/aero effectiveness logic.
-% x is currently unused but retained for the online identification interface contract.
-if isempty(x)
-    x = zeros(12, 1); %#ok<NASGU>
-end
+% Reserve these references for future higher-fidelity asymmetric load models.
+unusedScales = [b; cbar]; %#ok<NASGU>
 end

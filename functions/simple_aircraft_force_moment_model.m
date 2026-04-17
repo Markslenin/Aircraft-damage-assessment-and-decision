@@ -1,37 +1,47 @@
 function y = simple_aircraft_force_moment_model(z)
-%SIMPLE_AIRCRAFT_FORCE_MOMENT_MODEL Baseline fixed-wing force/moment placeholder.
-%   z = [x(12); u_cmd(4); eta_ctrl(4)]
+%SIMPLE_AIRCRAFT_FORCE_MOMENT_MODEL Baseline force/moment model for P1.
+%   z = [x(12); u_cmd(4); theta_d(12)]
+%
+% The actuator/propulsion path produces the nominal force and moment set
+% with control/thrust effectiveness applied. Structural damage force/moment
+% deltas are injected separately through damage_injection_interface.
 
 z = z(:);
 
-if numel(z) < 20
-    error('simple_aircraft_force_moment_model expects 20 elements: x(12), u_cmd(4), eta_ctrl(4).');
+if numel(z) < 28
+    error('simple_aircraft_force_moment_model expects 28 elements: x(12), u_cmd(4), theta_d(12).');
 end
 
 x = z(1:12);
 u_cmd = z(13:16);
-eta_ctrl = z(17:20);
+theta_d = z(17:28);
+
 Pcfg = evalin('base', 'P');
+damageParams = parse_damage_vector(theta_d);
+damageEffects = map_damage_to_aero_effects(damageParams, x, u_cmd);
 
-u_eff = u_cmd(:) .* eta_ctrl(:);
+u_eff = u_cmd(:);
+u_eff(1) = u_eff(1) * damageEffects.elevatorEffScale;
+u_eff(2) = u_eff(2) * damageEffects.aileronEffScale;
+u_eff(3) = u_eff(3) * damageEffects.rudderEffScale;
+u_eff(4) = u_eff(4) * damageEffects.thrustEffScale;
 
-uvw = x(4:6);
-euler = x(7:9);
+flightCondition = build_flight_condition(x, u_eff);
+uvw = flightCondition.uvw_mps;
+euler = flightCondition.euler_rad;
 
 uBody = uvw(1);
-vBody = uvw(2);
 wBody = uvw(3);
-V = max(10.0, norm(uvw));
-alpha = atan2(wBody, max(abs(uBody), 1.0));
-beta = asin(max(-0.99, min(0.99, vBody / V)));
+alpha = flightCondition.alpha_rad;
+beta = flightCondition.beta_rad;
+V = flightCondition.airspeed_mps;
 
 de = sat(u_eff(1), -0.5, 0.5);
 da = sat(u_eff(2), -0.5, 0.5);
 dr = sat(u_eff(3), -0.5, 0.5);
 throttle = sat(u_eff(4), 0.0, 1.0);
 
-rho = Pcfg.aero.rho0;
-qbar = 0.5 * rho * V^2;
+qbar = flightCondition.dynamicPressure_Pa;
 S = Pcfg.aircraft.wingArea;
 b = Pcfg.aircraft.span;
 cbar = Pcfg.aircraft.meanAerodynamicChord;
@@ -61,6 +71,11 @@ Cn = Pcfg.aero.Cn_dr * dr;
 Mx = qbar * S * b * Cl;
 My = qbar * S * cbar * Cm;
 Mz = qbar * S * b * Cn;
+
+if ~isfinite(V)
+    Fx = 0; Fy = 0; Fz = 0;
+    Mx = 0; My = 0; Mz = 0;
+end
 
 F_b_N = [Fx; Fy; Fz] + g_b;
 M_b_Nm = [Mx; My; Mz];
