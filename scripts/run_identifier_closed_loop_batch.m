@@ -1,31 +1,33 @@
-function closedLoopSummary = run_identifier_closed_loop_batch()
+function closedLoopResult = run_identifier_closed_loop_batch()
 %RUN_IDENTIFIER_CLOSED_LOOP_BATCH Compare oracle and identified pipelines.
 
 rootDir = fileparts(fileparts(mfilename('fullpath')));
 run(fullfile(rootDir, 'scripts', 'init_project.m'));
 
-datasetPath = fullfile(rootDir, 'data', 'identifier_dataset.mat');
+datasetPath = fullfile(rootDir, 'data', 'identifier_dataset_v3.mat');
 if ~isfile(datasetPath)
     generate_identifier_dataset();
 end
 
-evalPath = fullfile(rootDir, 'results', 'identifier_eval.mat');
-if ~isfile(evalPath)
-    evaluate_identifier();
+sweepPath = fullfile(rootDir, 'results', 'identifier_hyperparam_sweep.mat');
+if ~isfile(sweepPath)
+    run_identifier_hyperparam_sweep();
 end
 
 D = load(datasetPath, 'identifierDataset');
-E = load(evalPath, 'evalEntries');
+H = load(sweepPath, 'sweepResult');
 identifierDataset = D.identifierDataset;
-identifierModel = E.evalEntries(1).identifierModel;
+bestEntry = H.sweepResult.entries(H.sweepResult.bestIndex);
+identifierModel = bestEntry.identifierModel;
 identifierConfig = identifierModel.config;
 
 closedLoopSummary = repmat(empty_closed_loop_entry(), numel(identifierDataset.samples), 1);
 
 for i = 1:numel(identifierDataset.samples)
-    theta_d = identifierDataset.samples(i).theta_d;
-    oracleResult = run_online_assessment_pipeline(theta_d, [], identifierConfig, 'oracle');
-    identifiedResult = run_online_assessment_pipeline(theta_d, identifierModel, identifierConfig, 'identified');
+    sample = identifierDataset.samples(i);
+    theta_d = sample.theta_d;
+    oracleResult = run_online_assessment_pipeline(theta_d, [], identifierConfig, 'oracle', sample.scenarioInfo);
+    identifiedResult = run_online_assessment_pipeline(theta_d, identifierModel, identifierConfig, 'identified', sample.scenarioInfo);
 
     etaTrue = [ ...
         oracleResult.oracle.ctrlMetrics.eta_roll, ...
@@ -41,10 +43,16 @@ for i = 1:numel(identifierDataset.samples)
     oracleDecision = oracleResult.oracle.decisionOutput.mode;
     identifiedDecision = identifiedResult.identified.decisionOutput.mode;
     dangerousMismatch = is_dangerous_mismatch(oracleDecision, identifiedDecision, identifiedResult.identified.identifierOutput.confidence);
+    conservativeDecision = is_strictly_conservative(oracleDecision, identifiedDecision);
+    overtrigger = conservativeDecision && ismember(upper(identifiedDecision), {'STABILIZE', 'DIVERT', 'EGRESS_PREP'}) && ...
+        ismember(upper(oracleDecision), {'NORMAL', 'RETURN'});
+    conservativeCorrect = conservativeDecision && ~dangerousMismatch && ~overtrigger;
+    unsafeUndertrigger = is_more_aggressive(identifiedDecision, oracleDecision);
 
     closedLoopSummary(i).scenarioId = i;
-    closedLoopSummary(i).scenarioType = identifierDataset.samples(i).scenarioInfo.scenarioType;
-    closedLoopSummary(i).severity = identifierDataset.samples(i).scenarioInfo.severity;
+    closedLoopSummary(i).scenarioType = sample.scenarioInfo.scenarioType;
+    closedLoopSummary(i).damageCategory = char(sample.damageCategory);
+    closedLoopSummary(i).severity = sample.scenarioInfo.severity;
     closedLoopSummary(i).theta_d = theta_d;
     closedLoopSummary(i).etaTrue = etaTrue;
     closedLoopSummary(i).etaHat = etaHat;
@@ -60,26 +68,44 @@ for i = 1:numel(identifierDataset.samples)
     closedLoopSummary(i).identifiedIsTrimmable = identifiedResult.identified.trimInfo.is_trimmable;
     closedLoopSummary(i).identifierConfidence = identifiedResult.identified.identifierOutput.confidence;
     closedLoopSummary(i).identifierUncertainty = identifiedResult.identified.identifierOutput.uncertaintyScore;
-    closedLoopSummary(i).conservativeDecision = is_conservative(oracleDecision, identifiedDecision);
+    closedLoopSummary(i).conservativeDecision = conservativeDecision;
     closedLoopSummary(i).dangerousMismatch = dangerousMismatch;
+    closedLoopSummary(i).conservativeCorrect = conservativeCorrect;
+    closedLoopSummary(i).conservativeOvertrigger = overtrigger;
+    closedLoopSummary(i).unsafeUndertrigger = unsafeUndertrigger;
 end
 
 summaryTable = closed_loop_table(closedLoopSummary);
-save(fullfile(rootDir, 'results', 'identifier_closed_loop_batch.mat'), 'closedLoopSummary', 'summaryTable');
-save(fullfile(rootDir, 'results', 'identified_vs_oracle_summary.mat'), 'closedLoopSummary', 'summaryTable');
+closedLoopResult = struct();
+closedLoopResult.closedLoopSummary = closedLoopSummary;
+closedLoopResult.summaryTable = summaryTable;
+closedLoopResult.averageEtaError = mean([closedLoopSummary.etaErrorMean]);
+closedLoopResult.decisionMatchRate = mean([closedLoopSummary.decisionMatch]);
+closedLoopResult.controllabilityMatchRate = mean([closedLoopSummary.controllabilityMatch]);
+closedLoopResult.trimMatchRate = mean([closedLoopSummary.trimInfoConsistency]);
+
+save(fullfile(rootDir, 'results', 'identifier_closed_loop_batch.mat'), 'closedLoopSummary', 'summaryTable', 'closedLoopResult');
+save(fullfile(rootDir, 'results', 'identified_vs_oracle_summary.mat'), 'closedLoopSummary', 'summaryTable', 'closedLoopResult');
 writetable(summaryTable, fullfile(rootDir, 'results', 'identifier_closed_loop_batch.csv'));
 
 fprintf('Closed-loop identifier batch complete.\n');
-fprintf('Average eta error: %.4f\n', mean([closedLoopSummary.etaErrorMean]));
-fprintf('Decision match rate: %.2f%%\n', 100 * mean([closedLoopSummary.decisionMatch]));
-fprintf('Controllability classification match rate: %.2f%%\n', 100 * mean([closedLoopSummary.controllabilityMatch]));
+fprintf('Average eta error: %.4f\n', closedLoopResult.averageEtaError);
+fprintf('Decision match rate: %.2f%%\n', 100 * closedLoopResult.decisionMatchRate);
+fprintf('Controllability classification match rate: %.2f%%\n', 100 * closedLoopResult.controllabilityMatchRate);
 end
 
-function tf = is_conservative(oracleDecision, identifiedDecision)
+function tf = is_strictly_conservative(oracleDecision, identifiedDecision)
 order = containers.Map( ...
     {'NORMAL', 'RETURN', 'DIVERT', 'STABILIZE', 'EGRESS_PREP', 'UNRECOVERABLE'}, ...
     [1 2 3 4 5 6]);
-tf = order(upper(identifiedDecision)) >= order(upper(oracleDecision));
+tf = order(upper(identifiedDecision)) > order(upper(oracleDecision));
+end
+
+function tf = is_more_aggressive(modeA, modeB)
+order = containers.Map( ...
+    {'NORMAL', 'RETURN', 'DIVERT', 'STABILIZE', 'EGRESS_PREP', 'UNRECOVERABLE'}, ...
+    [1 2 3 4 5 6]);
+tf = order(upper(modeA)) < order(upper(modeB));
 end
 
 function tf = is_dangerous_mismatch(oracleDecision, identifiedDecision, confidence)
@@ -93,6 +119,7 @@ function entry = empty_closed_loop_entry()
 entry = struct( ...
     'scenarioId', 0, ...
     'scenarioType', '', ...
+    'damageCategory', '', ...
     'severity', 0, ...
     'theta_d', zeros(12, 1), ...
     'etaTrue', zeros(1, 4), ...
@@ -110,7 +137,10 @@ entry = struct( ...
     'identifierConfidence', NaN, ...
     'identifierUncertainty', NaN, ...
     'conservativeDecision', false, ...
-    'dangerousMismatch', false);
+    'dangerousMismatch', false, ...
+    'conservativeCorrect', false, ...
+    'conservativeOvertrigger', false, ...
+    'unsafeUndertrigger', false);
 end
 
 function tbl = closed_loop_table(summary)
@@ -118,6 +148,7 @@ n = numel(summary);
 tbl = table( ...
     (1:n).', ...
     string({summary.scenarioType}).', ...
+    string({summary.damageCategory}).', ...
     [summary.severity].', ...
     [summary.etaErrorMean].', ...
     string({summary.oracleDecision}).', ...
@@ -126,11 +157,15 @@ tbl = table( ...
     [summary.controllabilityMatch].', ...
     [summary.trimInfoConsistency].', ...
     [summary.conservativeDecision].', ...
+    [summary.conservativeCorrect].', ...
+    [summary.conservativeOvertrigger].', ...
+    [summary.unsafeUndertrigger].', ...
     [summary.dangerousMismatch].', ...
     [summary.identifierConfidence].', ...
     [summary.identifierUncertainty].', ...
-    'VariableNames', {'scenarioId', 'scenarioType', 'severity', 'etaErrorMean', ...
+    'VariableNames', {'scenarioId', 'scenarioType', 'damageCategory', 'severity', 'etaErrorMean', ...
     'oracleDecision', 'identifiedDecision', 'decisionMatch', 'controllabilityMatch', ...
-    'trimInfoConsistency', 'conservativeDecision', 'dangerousMismatch', ...
+    'trimInfoConsistency', 'conservativeDecision', 'conservativeCorrect', ...
+    'conservativeOvertrigger', 'unsafeUndertrigger', 'dangerousMismatch', ...
     'identifierConfidence', 'identifierUncertainty'});
 end

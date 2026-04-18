@@ -1,5 +1,5 @@
 function sample = simulate_identifier_timeseries(theta_d, identifierConfig, scenarioInfo)
-%SIMULATE_IDENTIFIER_TIMESERIES Create P3 surrogate histories for identifier work.
+%SIMULATE_IDENTIFIER_TIMESERIES Create surrogate histories for identifier work.
 %   TODO: Replace surrogate generation with logged plant trajectories and a
 %   proper state observer once the online identifier is deployed.
 
@@ -26,11 +26,26 @@ end
 if ~isfield(scenarioInfo, 'disturbanceGain') || isempty(scenarioInfo.disturbanceGain)
     scenarioInfo.disturbanceGain = 1.0;
 end
+if ~isfield(scenarioInfo, 'windLevel_mps') || isempty(scenarioInfo.windLevel_mps)
+    scenarioInfo.windLevel_mps = 0.0;
+end
 if ~isfield(scenarioInfo, 'excitationType') || isempty(scenarioInfo.excitationType)
     scenarioInfo.excitationType = 'step_sine';
 end
 if ~isfield(scenarioInfo, 'splitTag') || isempty(scenarioInfo.splitTag)
     scenarioInfo.splitTag = 'train';
+end
+if ~isfield(scenarioInfo, 'damageCategory') || isempty(scenarioInfo.damageCategory)
+    scenarioInfo.damageCategory = 'generic';
+end
+if ~isfield(scenarioInfo, 'damageSeverityLevel') || isempty(scenarioInfo.damageSeverityLevel)
+    scenarioInfo.damageSeverityLevel = 'moderate';
+end
+if ~isfield(scenarioInfo, 'flightConditionTag') || isempty(scenarioInfo.flightConditionTag)
+    scenarioInfo.flightConditionTag = 'default';
+end
+if ~isfield(scenarioInfo, 'datasetVersion') || isempty(scenarioInfo.datasetVersion)
+    scenarioInfo.datasetVersion = 'identifier_dataset_v3';
 end
 
 dt = identifierConfig.sequenceDt;
@@ -51,6 +66,7 @@ nominalAccel = zeros(N, 3);
 nominalControl = zeros(N, 4);
 measuredState = zeros(N, 12);
 residualExcitation = scenarioInfo.disturbanceGain * build_disturbance_profile(t, damageParams, ctrlMetrics);
+windExcitation = build_wind_disturbance_profile(t, scenarioInfo.windLevel_mps);
 
 nominalState(1, :) = scenarioInfo.initialState(:).';
 measuredState(1, :) = scenarioInfo.initialState(:).';
@@ -62,7 +78,7 @@ for k = 2:N
     nominalAccel(k, :) = nomPred.predictedAccel(:).';
     nominalControl(k, :) = uCmdBase(k-1, :);
 
-    measuredState(k, :) = nominalState(k, :) + residualExcitation(k, :);
+    measuredState(k, :) = nominalState(k, :) + residualExcitation(k, :) + windExcitation(k, :);
     measuredState(k, 4) = max(12.0, measuredState(k, 4));
 end
 
@@ -79,7 +95,10 @@ featureModes = { ...
     'summary_plus_residual_energy', ...
     'summary_plus_cross_channel_stats', ...
     'hybrid_sequence_summary', ...
-    'sequence'};
+    'sequence', ...
+    'normalized_summary', ...
+    'residual_coupling_summary', ...
+    'hybrid_sequence_summary_v2'};
 featureModeReadyData = struct();
 featureInfo = struct();
 for i = 1:numel(featureModes)
@@ -109,6 +128,11 @@ sample.featureSummary = flatten_feature(selectedFeature);
 sample.featureModeReadyData = featureModeReadyData;
 sample.featureInfo = featureInfo;
 sample.scenarioInfo = scenarioInfo;
+sample.damageCategory = string(scenarioInfo.damageCategory);
+sample.damageSeverityLevel = string(scenarioInfo.damageSeverityLevel);
+sample.excitationType = string(scenarioInfo.excitationType);
+sample.flightConditionTag = string(scenarioInfo.flightConditionTag);
+sample.datasetVersion = string(scenarioInfo.datasetVersion);
 sample.ctrlMetrics = ctrlMetrics;
 sample.trimInfo = trimInfo;
 sample.decisionOutput = decisionOutput;
@@ -127,6 +151,14 @@ switch lower(excitationType)
         uCmd(:, 1) = uCmd(:, 1) + 0.02 * sin((0.1 + 0.03 * t) .* t);
         uCmd(:, 3) = uCmd(:, 3) + 0.02 * sin((0.08 + 0.02 * t) .* t);
         uCmd(:, 4) = uCmd(:, 4) + 0.04 * cos(0.15 * t);
+    case 'doublet'
+        uCmd(:, 1) = uCmd(:, 1) + 0.03 * ((t > 1.0 & t < 1.8) - (t >= 1.8 & t < 2.6));
+        uCmd(:, 2) = uCmd(:, 2) + 0.025 * ((t > 3.0 & t < 3.8) - (t >= 3.8 & t < 4.6));
+    case 'multisine'
+        uCmd(:, 1) = uCmd(:, 1) + 0.015 * sin(0.20 * t) + 0.010 * sin(0.65 * t);
+        uCmd(:, 2) = uCmd(:, 2) + 0.020 * sin(0.17 * t + 0.4);
+        uCmd(:, 3) = uCmd(:, 3) + 0.015 * sin(0.11 * t);
+        uCmd(:, 4) = uCmd(:, 4) + 0.035 * cos(0.09 * t);
     otherwise
         uCmd(:, 1) = uCmd(:, 1) + 0.02 * sin(0.20 * t);
         uCmd(:, 4) = uCmd(:, 4) + 0.03 * sin(0.10 * t);
@@ -151,6 +183,17 @@ residualExcitation(:, 9) = 0.06 * (1 - ctrlMetrics.eta_yaw) * sin(0.22 * t);
 residualExcitation(:, 10) = 0.05 * sign_nonzero(wingAsym) * (1 - ctrlMetrics.eta_roll) * exp(-0.08 * t);
 residualExcitation(:, 11) = 0.05 * (1 - ctrlMetrics.eta_pitch) * exp(-0.08 * t);
 residualExcitation(:, 12) = 0.05 * (1 - ctrlMetrics.eta_yaw) * exp(-0.08 * t);
+end
+
+function windExcitation = build_wind_disturbance_profile(t, windLevel_mps)
+windExcitation = zeros(numel(t), 12);
+if windLevel_mps <= 0
+    return;
+end
+windExcitation(:, 5) = 0.08 * windLevel_mps * sin(0.12 * t);
+windExcitation(:, 6) = 0.06 * windLevel_mps * cos(0.09 * t);
+windExcitation(:, 7) = deg2rad(0.10 * windLevel_mps) * sin(0.16 * t);
+windExcitation(:, 9) = deg2rad(0.15 * windLevel_mps) * cos(0.21 * t);
 end
 
 function y = flatten_feature(featureData)

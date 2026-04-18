@@ -13,8 +13,12 @@ windowLength = max(1, identifierConfig.residualWindowLength);
 
 fields = fieldnames(residualStruct);
 residualFiltered = struct();
+residualDelta = struct();
 
 for i = 1:numel(fields)
+    if isstruct(residualStruct.(fields{i}))
+        continue;
+    end
     value = residualStruct.(fields{i});
     switch modeName
         case 'moving_average'
@@ -25,7 +29,10 @@ for i = 1:numel(fields)
         otherwise
             residualFiltered.(fields{i}) = value;
     end
+    residualDelta.(fields{i}) = residualFiltered.(fields{i}) - value;
 end
+
+residualFiltered.deltaVsRaw = residualDelta;
 end
 
 function y = smooth_columns(x, windowLength)

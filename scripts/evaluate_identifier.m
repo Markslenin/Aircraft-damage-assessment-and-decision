@@ -1,10 +1,10 @@
 function evalResult = evaluate_identifier()
-%EVALUATE_IDENTIFIER Train and evaluate the default P3 identifier models.
+%EVALUATE_IDENTIFIER Train and evaluate default P3.5 identifier models.
 
 rootDir = fileparts(fileparts(mfilename('fullpath')));
 run(fullfile(rootDir, 'scripts', 'init_project.m'));
 
-datasetPath = fullfile(rootDir, 'data', 'identifier_dataset.mat');
+datasetPath = fullfile(rootDir, 'data', 'identifier_dataset_v3.mat');
 if ~isfile(datasetPath)
     generate_identifier_dataset();
 end
@@ -13,14 +13,14 @@ S = load(datasetPath, 'identifierDataset');
 identifierDataset = S.identifierDataset;
 
 configs = { ...
-    get_identifier_model_config('ridge', 'summary_plus_residual_energy'), ...
-    get_identifier_model_config('shallow_mlp', 'summary_plus_cross_channel_stats')};
+    get_identifier_model_config('ridge', 'normalized_summary'), ...
+    get_identifier_model_config('shallow_mlp', 'residual_coupling_summary')};
 
 evalEntries = struct('modelType', {}, 'identifierModel', {}, 'normalizationInfo', {}, 'trainingReport', {}, 'summaryTable', {});
 
 for k = 1:numel(configs)
     [identifierModel, normalizationInfo, trainingReport] = train_damage_identifier(identifierDataset, configs{k});
-    summaryTable = build_eval_table(trainingReport, trainingReport.targetNames);
+    summaryTable = build_eval_table(trainingReport, trainingReport.targetNames, configs{k});
     evalEntries(k).modelType = identifierModel.modelType;
     evalEntries(k).identifierModel = identifierModel;
     evalEntries(k).normalizationInfo = normalizationInfo;
@@ -33,7 +33,7 @@ if ~exist(figDir, 'dir')
     mkdir(figDir);
 end
 
-plot_identifier_figures(evalEntries(1), identifierDataset, figDir);
+plot_identifier_figures(evalEntries(1), figDir);
 
 summaryTable = vertcat(evalEntries.summaryTable);
 save(fullfile(rootDir, 'results', 'identifier_eval.mat'), 'evalEntries', 'summaryTable');
@@ -43,25 +43,27 @@ evalResult = struct('entries', evalEntries, 'summaryTable', summaryTable);
 fprintf('Identifier evaluation complete for %d model configurations.\n', numel(evalEntries));
 end
 
-function tbl = build_eval_table(trainingReport, targetNames)
+function tbl = build_eval_table(trainingReport, targetNames, cfg)
+n = numel(targetNames);
 tbl = table( ...
-    repmat(string(trainingReport.modelType), numel(targetNames), 1), ...
+    repmat(string(trainingReport.modelType), n, 1), ...
+    repmat(string(cfg.featureMode), n, 1), ...
     string(targetNames(:)), ...
+    trainingReport.trainMae(:), ...
     trainingReport.valMae(:), ...
-    trainingReport.valRmse(:), ...
     trainingReport.testMae(:), ...
     trainingReport.testRmse(:), ...
-    'VariableNames', {'modelType', 'targetName', 'valMae', 'valRmse', 'testMae', 'testRmse'});
+    'VariableNames', {'modelType', 'featureMode', 'targetName', 'trainMae', 'valMae', 'testMae', 'testRmse'});
 end
 
-function plot_identifier_figures(evalEntry, identifierDataset, figDir)
+function plot_identifier_figures(evalEntry, figDir)
 Ytrue = evalEntry.trainingReport.Ytrue;
 Yhat = evalEntry.trainingReport.Yhat;
 targetNames = evalEntry.trainingReport.targetNames;
-testIdx = evalEntry.trainingReport.testIdx;
+testMeta = evalEntry.trainingReport.testSampleMeta;
 
 f1 = figure('Visible', 'off');
-scatter(Ytrue(:, end), Yhat(:, end), 40, 'filled');
+scatter(Ytrue(:, end), Yhat(:, end), 30, 'filled');
 grid on;
 xlabel('eta_{total,true}');
 ylabel('eta_{total,hat}');
@@ -80,13 +82,9 @@ title('Identifier Channel Error Statistics');
 saveas(f2, fullfile(figDir, 'channel_error_statistics.png'));
 close(f2);
 
-scenarioTypes = strings(numel(testIdx), 1);
-for i = 1:numel(testIdx)
-    scenarioTypes(i) = string(identifierDataset.samples(testIdx(i)).scenarioInfo.scenarioType);
-end
-
+cats = categorical(string({testMeta.damageCategory}));
 f3 = figure('Visible', 'off');
-boxplot(abs(Yhat(:, end) - Ytrue(:, end)), categorical(scenarioTypes));
+boxplot(abs(Yhat(:, end) - Ytrue(:, end)), cats);
 grid on;
 ylabel('Absolute eta_{total} Error');
 title('eta_{total} Error by Damage Category');

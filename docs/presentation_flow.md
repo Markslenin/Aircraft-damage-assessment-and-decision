@@ -1,0 +1,50 @@
+# Presentation Flow                                                                                             
+                                                                                                               
+                                                                                                               ## 1. Project Main Flow                                                                                         
+                                                                                                               
+                                                                                                               ```mermaid                                                                                                      
+                                                                                                               flowchart LR                                                                                                    
+                                                                                                                 A[Damage Input] --> B[Residual-driven Identifier]                                                             
+                                                                                                                 B --> C[Controllability and Trim]                                                                             
+                                                                                                                 C --> D[Decision Output]                                                                                      
+                                                                                                                 D --> E[Visualization and Evaluation]                                                                         
+                                                                                                               ```                                                                                                             
+                                                                                                               This figure explains the end-to-end research chain at a high level.                                             
+                                                                                                               It is suitable for the opening system overview slide.                                                           
+                                                                                                               
+                                                                                                               ## 2. Identifier Training Flow                                                                                  
+                                                                                                               
+                                                                                                               ```mermaid                                                                                                      
+                                                                                                               flowchart TD                                                                                                    
+                                                                                                                 T1[Scenario Generation] --> T2[Nominal Prediction]                                                            
+                                                                                                                 T2 --> T3[Residual / Feature Extraction]                                                                      
+                                                                                                                 T3 --> T4[Model Training and Sweep]                                                                           
+                                                                                                                 T4 --> T5[Best Configuration]                                                                                 
+                                                                                                               ```                                                                                                             
+                                                                                                               This figure separates data generation, feature engineering, and training.                                       
+                                                                                                               Use it when introducing the offline part of the project.                                                        
+                                                                                                               
+                                                                                                               ## 3. Identified Mode vs Oracle Mode                                                                            
+                                                                                                               
+                                                                                                               ```mermaid                                                                                                      
+                                                                                                               flowchart LR                                                                                                    
+                                                                                                                 O1[True theta_d] --> O2[Oracle Assessment]                                                                    
+                                                                                                                 I1[Residual Features] --> I2[Identifier]                                                                      
+                                                                                                                 I2 --> I3[Identified Assessment]                                                                              
+                                                                                                                 O2 --> C[Consistency Comparison]                                                                              
+                                                                                                                 I3 --> C                                                                                                      
+                                                                                                               ```                                                                                                             
+                                                                                                               This figure emphasizes that the same decision chain is fed by either true damage or identified damage summaries.
+                                                                                                               Use it to explain fairness of closed-loop comparison.                                                           
+                                                                                                               
+                                                                                                               ## 4. Decision Consistency Evaluation                                                                           
+                                                                                                               
+                                                                                                               ```mermaid                                                                                                      
+                                                                                                               flowchart TD                                                                                                    
+                                                                                                                 C1[eta Error] --> C4[Closed-loop Metrics]                                                                     
+                                                                                                                 C2[Trim Match] --> C4                                                                                         
+                                                                                                                 C3[Decision Match / Unsafe Undertrigger] --> C4                                                               
+                                                                                                               ```                                                                                                             
+                                                                                                               This figure focuses on evaluation outputs rather than plant details.                                            
+                                                                                                               Use it on result summary slides.                                                                                
+                                                                                                               

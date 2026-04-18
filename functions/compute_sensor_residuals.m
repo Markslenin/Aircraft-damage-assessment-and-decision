@@ -37,12 +37,24 @@ nomControl = resize_rows(nomControl, N);
 
 measuredAccel = estimate_body_acceleration(measuredState, identifierConfig.sequenceDt);
 
+velResidual = measuredState(:, 4:6) - nomState(:, 4:6);
+angRateResidual = measuredState(:, 10:12) - nomState(:, 10:12);
+attitudeResidual = measuredState(:, 7:9) - nomState(:, 7:9);
+accelResidual = measuredAccel - nomAccel;
+controlTrackingResidual = commandedInput - nomControl;
+
 residualStruct = struct();
-residualStruct.velResidual = measuredState(:, 4:6) - nomState(:, 4:6);
-residualStruct.angRateResidual = measuredState(:, 10:12) - nomState(:, 10:12);
-residualStruct.attitudeResidual = measuredState(:, 7:9) - nomState(:, 7:9);
-residualStruct.accelResidual = measuredAccel - nomAccel;
-residualStruct.controlTrackingResidual = commandedInput - nomControl;
+residualStruct.velResidual = velResidual;
+residualStruct.angRateResidual = angRateResidual;
+residualStruct.attitudeResidual = attitudeResidual;
+residualStruct.accelResidual = accelResidual;
+residualStruct.controlTrackingResidual = controlTrackingResidual;
+residualStruct.normalized = struct( ...
+    'velResidual', normalize_residual_block(velResidual), ...
+    'angRateResidual', normalize_residual_block(angRateResidual), ...
+    'attitudeResidual', normalize_residual_block(attitudeResidual), ...
+    'accelResidual', normalize_residual_block(accelResidual), ...
+    'controlTrackingResidual', normalize_residual_block(controlTrackingResidual));
 end
 
 function x = ensure_2d(x)
@@ -81,4 +93,11 @@ if size(uvw, 1) == 1
 else
     accel = [zeros(1, 3); diff(uvw, 1, 1) / max(dt, 1.0e-6)];
 end
+end
+
+function y = normalize_residual_block(x)
+mu = mean(x, 1);
+scale = std(x, 0, 1);
+scale(scale < 1.0e-6) = 1.0;
+y = (x - mu) ./ scale;
 end

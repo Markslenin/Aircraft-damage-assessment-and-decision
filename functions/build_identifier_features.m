@@ -16,6 +16,9 @@ L = min(identifierConfig.sequenceLength, size(stateHistory, 1));
 [residualSummary, residualNames] = summarize_matrix(residualMatrix, 'residual');
 [residualEnergy, energyNames] = residual_energy_features(residualMatrix, 'residual');
 [crossStats, crossNames] = cross_channel_features(stateHistory, inputHistory, residualMatrix);
+[couplingStats, couplingNames] = residual_coupling_features(residualHistory, inputHistory);
+[deltaStats, deltaNames] = filtered_delta_features(residualHistory);
+[normalizedSummary, normalizedNames] = normalized_feature_block(residualHistory);
 
 summaryBase = [stateSummary, inputSummary, residualSummary];
 summaryNames = [{stateNames}, {inputNames}, {residualNames}];
@@ -28,19 +31,38 @@ switch featureMode
         featureOutput = [summaryBase, residualEnergy];
         featureInfo = make_info('summary_plus_residual_energy', [summaryNames, energyNames], {}, L);
     case 'summary_plus_cross_channel_stats'
-        featureOutput = [summaryBase, residualEnergy, crossStats];
-        featureInfo = make_info('summary_plus_cross_channel_stats', [summaryNames, energyNames, crossNames], {}, L);
+        featureOutput = [summaryBase, residualEnergy, crossStats, couplingStats];
+        featureInfo = make_info('summary_plus_cross_channel_stats', [summaryNames, energyNames, crossNames, couplingNames], {}, L);
+    case 'normalized_summary'
+        featureOutput = [summaryBase, normalizedSummary, deltaStats];
+        featureInfo = make_info('normalized_summary', [summaryNames, normalizedNames, deltaNames], {}, L);
+    case 'residual_coupling_summary'
+        featureOutput = [summaryBase, residualEnergy, couplingStats, deltaStats];
+        featureInfo = make_info('residual_coupling_summary', [summaryNames, energyNames, couplingNames, deltaNames], {}, L);
     case 'sequence'
         sequenceFeatures = [stateHistory(end-L+1:end, :), inputHistory(end-L+1:end, :), residualMatrix(end-L+1:end, :)];
-        featureOutput = sequenceFeatures;
-        featureInfo = make_info('sequence', {}, {'state_input_residual_sequence'}, L);
+        featureOutput = struct('rawFeatures', summaryBase, 'normalizedFeatures', normalizedSummary, 'sequenceFeatures', sequenceFeatures, 'featureMeta', struct('mode', 'sequence'));
+        featureInfo = make_info('sequence', summaryNames, {'state_input_residual_sequence'}, L);
     case 'hybrid_sequence_summary'
         summaryFeatures = [summaryBase, residualEnergy, crossStats];
         sequenceFeatures = [stateHistory(end-L+1:end, :), inputHistory(end-L+1:end, :), residualMatrix(end-L+1:end, :)];
         featureOutput = struct( ...
+            'rawFeatures', summaryBase, ...
+            'normalizedFeatures', normalizedSummary, ...
             'summaryFeatures', summaryFeatures, ...
-            'sequenceFeatures', sequenceFeatures);
+            'sequenceFeatures', sequenceFeatures, ...
+            'featureMeta', struct('mode', 'hybrid_sequence_summary'));
         featureInfo = make_info('hybrid_sequence_summary', [summaryNames, energyNames, crossNames], {'state_input_residual_sequence'}, L);
+    case 'hybrid_sequence_summary_v2'
+        summaryFeatures = [summaryBase, residualEnergy, crossStats, couplingStats, deltaStats];
+        sequenceFeatures = [stateHistory(end-L+1:end, :), inputHistory(end-L+1:end, :), residualMatrix(end-L+1:end, :)];
+        featureOutput = struct( ...
+            'rawFeatures', [summaryBase, residualEnergy, crossStats], ...
+            'normalizedFeatures', [normalizedSummary, deltaStats], ...
+            'summaryFeatures', summaryFeatures, ...
+            'sequenceFeatures', sequenceFeatures, ...
+            'featureMeta', struct('mode', 'hybrid_sequence_summary_v2'));
+        featureInfo = make_info('hybrid_sequence_summary_v2', [summaryNames, energyNames, crossNames, couplingNames, deltaNames], {'state_input_residual_sequence'}, L);
     otherwise
         error('Unsupported featureMode: %s', identifierConfig.featureMode);
 end
@@ -115,6 +137,20 @@ for i = 1:N
     vec(idx) = [sum(col.^2), max(abs(col))];
     names(idx) = {sprintf('%s_%d_energy_only', prefix, i), sprintf('%s_%d_peak_only', prefix, i)};
 end
+
+if size(M, 2) >= 9
+    rollEnergy = sum(M(:, 4:6).^2, 'all');
+    pitchEnergy = sum(M(:, 7:9).^2, 'all');
+    yawEnergy = sum(M(:, 1:3).^2, 'all');
+    vec = [vec, ...
+        safe_ratio(rollEnergy, pitchEnergy), ...
+        safe_ratio(rollEnergy, yawEnergy), ...
+        safe_ratio(pitchEnergy, yawEnergy)];
+    names = [names, ...
+        {sprintf('%s_roll_pitch_energy_ratio', prefix), ...
+         sprintf('%s_roll_yaw_energy_ratio', prefix), ...
+         sprintf('%s_pitch_yaw_energy_ratio', prefix)}];
+end
 end
 
 function [vec, names] = cross_channel_features(stateHistory, inputHistory, residualMatrix)
@@ -138,6 +174,75 @@ vec(5) = safe_corr(mean(abs(residualMatrix(:, 1:3)), 2), mean(abs(residualMatrix
 vec(6) = safe_corr(mean(abs(residualMatrix(:, 4:6)), 2), mean(abs(residualMatrix(:, 7:9)), 2));
 vec(7) = mean(abs(diff(inputHistory, 1, 1)), 'all');
 vec(8) = mean(abs(diff(stateHistory, 1, 1)), 'all');
+end
+
+function [vec, names] = residual_coupling_features(residualHistory, inputHistory)
+att = residualHistory.attitudeResidual;
+rate = residualHistory.angRateResidual;
+vel = residualHistory.velResidual;
+ctrl = inputHistory;
+vec = [ ...
+    safe_corr(mean(abs(att), 2), mean(abs(rate), 2)), ...
+    safe_corr(att(:, 1), rate(:, 1)), ...
+    safe_corr(att(:, 2), rate(:, 2)), ...
+    safe_corr(att(:, 3), rate(:, 3)), ...
+    safe_corr(ctrl(:, min(2, size(ctrl, 2))), vel(:, 2)), ...
+    safe_delay_proxy(ctrl(:, min(2, size(ctrl, 2))), rate(:, 1)), ...
+    safe_delay_proxy(ctrl(:, 1), rate(:, 2)), ...
+    safe_delay_proxy(ctrl(:, min(3, size(ctrl, 2))), rate(:, 3))];
+names = { ...
+    'coupling_attitude_rate_mean', ...
+    'coupling_roll_att_rate', ...
+    'coupling_pitch_att_rate', ...
+    'coupling_yaw_att_rate', ...
+    'coupling_aileron_vel', ...
+    'delay_proxy_aileron_roll', ...
+    'delay_proxy_elevator_pitch', ...
+    'delay_proxy_rudder_yaw'};
+end
+
+function [vec, names] = filtered_delta_features(residualHistory)
+if isfield(residualHistory, 'deltaVsRaw')
+    M = [ ...
+        residualHistory.deltaVsRaw.velResidual, ...
+        residualHistory.deltaVsRaw.angRateResidual, ...
+        residualHistory.deltaVsRaw.attitudeResidual, ...
+        residualHistory.deltaVsRaw.accelResidual, ...
+        residualHistory.deltaVsRaw.controlTrackingResidual];
+else
+    M = zeros(size(residualHistory.velResidual, 1), 16);
+end
+[vec, names] = summarize_matrix(M, 'filtered_delta');
+end
+
+function [vec, names] = normalized_feature_block(residualHistory)
+if isfield(residualHistory, 'normalized')
+    M = [ ...
+        residualHistory.normalized.velResidual, ...
+        residualHistory.normalized.angRateResidual, ...
+        residualHistory.normalized.attitudeResidual, ...
+        residualHistory.normalized.accelResidual, ...
+        residualHistory.normalized.controlTrackingResidual];
+else
+    M = zeros(size(residualHistory.velResidual, 1), 16);
+end
+[vec, names] = summarize_matrix(M, 'normalized_residual');
+end
+
+function r = safe_ratio(a, b)
+r = a / max(abs(b), 1.0e-6);
+end
+
+function d = safe_delay_proxy(u, y)
+u = u(:);
+y = y(:);
+if numel(u) < 3 || numel(y) < 3
+    d = 0;
+    return;
+end
+c0 = safe_corr(u, y);
+c1 = safe_corr(u(1:end-1), y(2:end));
+d = c1 - c0;
 end
 
 function c = safe_corr(a, b)

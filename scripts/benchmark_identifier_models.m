@@ -1,10 +1,10 @@
 function benchmarkResult = benchmark_identifier_models()
-%BENCHMARK_IDENTIFIER_MODELS Compare multiple P3 identifier model configs.
+%BENCHMARK_IDENTIFIER_MODELS Legacy compact benchmark kept for compatibility.
 
 rootDir = fileparts(fileparts(mfilename('fullpath')));
 run(fullfile(rootDir, 'scripts', 'init_project.m'));
 
-datasetPath = fullfile(rootDir, 'data', 'identifier_dataset.mat');
+datasetPath = fullfile(rootDir, 'data', 'identifier_dataset_v3.mat');
 if ~isfile(datasetPath)
     generate_identifier_dataset();
 end
@@ -13,9 +13,9 @@ S = load(datasetPath, 'identifierDataset');
 identifierDataset = S.identifierDataset;
 
 configs = { ...
-    get_identifier_model_config('ridge', 'summary'), ...
+    get_identifier_model_config('ridge', 'normalized_summary'), ...
     get_identifier_model_config('shallow_mlp', 'summary_plus_residual_energy'), ...
-    get_identifier_model_config('sequence_mlp_placeholder', 'hybrid_sequence_summary')};
+    get_identifier_model_config('sequence_placeholder', 'hybrid_sequence_summary_v2')};
 
 entries = struct('label', {}, 'identifierModel', {}, 'trainingReport', {});
 summaryRows = [];
