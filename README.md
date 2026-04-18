@@ -1,5 +1,11 @@
 # Damaged Fixed-Wing Aircraft Online Identification and Decision System ✈️🔥🛠️
 
+<p align="right">
+  <a href="/C:/Users/22149/Desktop/FC/README.md">English</a> | 
+  <a href="/C:/Users/22149/Desktop/FC/README.zh-CN.md">简体中文</a> | 
+  <a href="/C:/Users/22149/Desktop/FC/README.fr.md">Français</a>
+</p>
+
 > A MATLAB/Simulink research prototype for answering one slightly dramatic but very practical question:
 >
 > **"The aircraft is damaged. Can it still behave, and if not, how nervous should we be?"** 😅
