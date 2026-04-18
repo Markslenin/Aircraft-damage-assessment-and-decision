@@ -1,17 +1,22 @@
-function residualStruct = compute_sensor_residuals(measuredState, commandedInput, nominalPrediction)
-%COMPUTE_SENSOR_RESIDUALS Build residual signals for the identifier.
+function residualStruct = compute_sensor_residuals(measuredState, commandedInput, nominalPrediction, identifierConfig)
+%COMPUTE_SENSOR_RESIDUALS Compute residuals against a unified nominal predictor.
 %   Inputs:
-%     measuredState   - Nx12 state history or 12x1 state vector
-%     commandedInput  - Nx4 input history or 4x1 control vector
-%     nominalPrediction - struct with fields:
-%         stateHist, accelHist, controlHist
+%     measuredState    - Nx12 measured state history or 12x1 state
+%     commandedInput   - Nx4 input history or 4x1 input
+%     nominalPrediction - struct returned by predict_nominal_response or a
+%                         struct with fields stateHist/accelHist/controlHist
+%     identifierConfig - optional config, used for residual filtering
 %
 %   Outputs:
-%     residualStruct.velResidual             - Nx3
-%     residualStruct.angRateResidual         - Nx3
-%     residualStruct.attitudeResidual        - Nx3
-%     residualStruct.accelResidual           - Nx3
-%     residualStruct.controlTrackingResidual - Nx4
+%     residualStruct.velResidual
+%     residualStruct.angRateResidual
+%     residualStruct.attitudeResidual
+%     residualStruct.accelResidual
+%     residualStruct.controlTrackingResidual
+
+if nargin < 4 || isempty(identifierConfig)
+    identifierConfig = get_identifier_target_config();
+end
 
 measuredState = ensure_2d(measuredState);
 commandedInput = ensure_2d(commandedInput);
@@ -22,21 +27,15 @@ if nargin < 3 || isempty(nominalPrediction)
     nominalPrediction = struct();
 end
 
-nomState = get_field_or_default(nominalPrediction, 'stateHist', zeros(N, size(measuredState, 2)));
-nomAccel = get_field_or_default(nominalPrediction, 'accelHist', zeros(N, 3));
-nomControl = get_field_or_default(nominalPrediction, 'controlHist', zeros(N, size(commandedInput, 2)));
+nomState = get_field_or_default(nominalPrediction, 'stateHist', measuredState);
+nomAccel = get_field_or_default(nominalPrediction, 'predictedAccelHist', zeros(N, 3));
+nomControl = get_field_or_default(nominalPrediction, 'controlHist', commandedInput);
 
-if size(nomState, 1) ~= N
-    nomState = resize_rows(nomState, N);
-end
-if size(nomAccel, 1) ~= N
-    nomAccel = resize_rows(nomAccel, N);
-end
-if size(nomControl, 1) ~= N
-    nomControl = resize_rows(nomControl, N);
-end
+nomState = resize_rows(nomState, N);
+nomAccel = resize_rows(nomAccel, N);
+nomControl = resize_rows(nomControl, N);
 
-measuredAccel = estimate_body_acceleration(measuredState);
+measuredAccel = estimate_body_acceleration(measuredState, identifierConfig.sequenceDt);
 
 residualStruct = struct();
 residualStruct.velResidual = measuredState(:, 4:6) - nomState(:, 4:6);
@@ -75,11 +74,11 @@ else
 end
 end
 
-function accel = estimate_body_acceleration(stateHist)
+function accel = estimate_body_acceleration(stateHist, dt)
 uvw = stateHist(:, 4:6);
 if size(uvw, 1) == 1
     accel = zeros(1, 3);
 else
-    accel = [zeros(1, 3); diff(uvw, 1, 1)];
+    accel = [zeros(1, 3); diff(uvw, 1, 1) / max(dt, 1.0e-6)];
 end
 end

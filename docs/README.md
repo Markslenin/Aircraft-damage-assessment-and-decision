@@ -1,22 +1,41 @@
 # 受损固定翼飞行器在线损伤识别与任务决策项目
 
-本工程采用 MATLAB Project + Simulink + Aerospace Blockset 组织，用于“受损固定翼飞行器在线损伤识别与任务决策”课题的原型开发。当前已推进到 P2 阶段，具备：
+本工程采用 MATLAB Project + Simulink + Aerospace Blockset 组织，面向“受损固定翼飞行器在线损伤识别与任务决策”课题的分阶段原型开发。
 
-- P1：统一损伤参数化、损伤到气动/控制效能映射、剩余可控性评估、可配平性判定、规则式任务决策、批量场景仿真、摘要数据集、结果图表输出
-- P2：残差驱动的在线损伤识别原型、时序识别数据集、基线识别器训练与评估、identified/oracle 两种评估模式、识别器与 P1 链路闭环打通
+当前阶段：
 
-## 项目结构
+- P1：损伤参数化、剩余可控性评估、规则式决策、批量场景仿真
+- P2：残差驱动识别原型、时序数据集、基线识别器、identified/oracle 闭环对比
+- P3：统一名义预测、滤波残差、更强特征工程、可插拔识别模型、带置信度的闭环评估
 
-- `models/`：主模型与后续子模型
-- `scripts/`：初始化、建模、批量场景、数据集、识别评估、后处理脚本
-- `functions/`：损伤映射、残差构造、识别、可控性评估、可配平性判定、决策管理函数
+## 目录结构
+
+- `models/`：主模型与子系统
+- `scripts/`：初始化、批量场景、识别数据集、评估、benchmark、闭环测试脚本
+- `functions/`：损伤解析、名义预测、残差、特征、识别、评估、决策函数
 - `data/`：摘要数据集与识别器数据集
-- `results/`：批量运行结果、识别器评估结果、图表输出
-- `docs/`：项目说明文档
+- `results/`：仿真、识别评估、闭环评估结果与图表
+- `docs/`：项目说明
+
+## 当前项目目标
+
+形成一个可运行的原型系统，完成：
+
+```text
+统一名义预测 -> 滤波残差 -> 更强识别器 -> 带置信度的闭环评估
+```
+
+并保持 Simulink 主模型可 `update`、可短时仿真、可继续替换为更高保真模块。
+
+## 已实现程度
+
+- P1：完整可运行
+- P2：完整打通，但识别精度仍偏原型级
+- P3：已建立更真实的残差驱动与更强的评估框架，当前重点是“可信度提升”和“评估质量提升”，不是最终高精度
 
 ## 损伤向量定义
 
-`theta_d` 为 12x1 连续损伤向量，每一维取值建议在 `[0, 1]`：
+`theta_d` 为 12x1 连续损伤向量，每一维取值建议在 `[0,1]`：
 
 | 索引 | 名称 | 含义 |
 | --- | --- | --- |
@@ -33,76 +52,102 @@
 | 11 | `rudder_eff` | 方向舵效能损失 |
 | 12 | `thrust_eff` | 推力效能损失 |
 
-推荐解释：
+## P1 核心评估链
 
-- `0.0`：无损伤或无效能损失
-- `0.2`：轻度损伤
-- `0.5`：中度损伤
-- `0.8`：重度损伤
-- `1.0`：近似完全失效
-
-## P1 可控性指标与决策模式
+- `parse_damage_vector`：损伤语义解析
+- `map_damage_to_aero_effects`：损伤到气动/控制效能映射
+- `compute_control_authority_metrics`：剩余可控性指标
+- `evaluate_trim_feasibility`：规则式可配平性判定
+- `decision_manager`：规则式任务决策
 
 ### 可控性指标
 
-- `eta_roll`：基于副翼有效性与滚转偏置力矩惩罚
-- `eta_pitch`：基于升降舵有效性、平尾损伤和俯仰偏置力矩惩罚
-- `eta_yaw`：基于方向舵/垂尾有效性与偏航偏置力矩惩罚
-- `eta_total`：综合指标
+- `eta_roll`
+- `eta_pitch`
+- `eta_yaw`
+- `eta_total`
 
 ```text
 eta_total = 0.35 * eta_roll + 0.40 * eta_pitch + 0.25 * eta_yaw
 ```
 
-`is_controllable` 由单轴下限与 `eta_total` 联合判定。该定义用于 P1/P2 阶段规则式决策，不代表严格的线性系统可控性判据。
-
 ### 决策模式
 
-- `NORMAL`：近似无损伤或轻微损伤，按常规任务继续
-- `STABILIZE`：先稳定姿态与能量状态
-- `RETURN`：具备返场/返航能力
-- `DIVERT`：转向低风险备降策略
-- `EGRESS_PREP`：仅具备短时稳定能力，准备应急退出
-- `UNRECOVERABLE`：剩余可控性/可配平性不足
+- `NORMAL`
+- `STABILIZE`
+- `RETURN`
+- `DIVERT`
+- `EGRESS_PREP`
+- `UNRECOVERABLE`
 
-## P2 识别目标定义
+## P2 / P3 识别目标
 
-P2 支持两类识别目标：
+当前支持两类识别目标：
 
-1. 直接估计 12 维损伤向量 `theta_d_hat`
-2. 估计剩余控制能力摘要量 `eta_hat`
+1. 直接估计 `theta_d_hat`
+2. 估计 `eta_hat`
 
-当前默认主任务采用 `eta_hat` 识别，输出为：
+当前默认主任务仍是 `eta_hat` 识别，输出：
 
 - `eta_roll_hat`
 - `eta_pitch_hat`
 - `eta_yaw_hat`
 - `eta_total_hat`
 
-`theta_d_hat` 识别接口已在配置层保留，用于下一阶段替换。
+保留 `theta_d_hat` 识别接口作为后续扩展。
 
-配置入口：
+入口配置：
 
 - `functions/get_identifier_target_config.m`
 
-其中定义：
+配置字段包括：
 
-- `mode`：`'eta'` 或 `'theta'`
+- `mode`
 - `targetNames`
 - `featureMode`
 - `sequenceLength`
+- `residualFilterMode`
+- `residualWindowLength`
 
-## 残差特征定义
+## P3 名义预测器
 
-### 当前残差定义
+P3 引入统一名义模型预测模块：
 
-P2 当前残差由 `compute_sensor_residuals` 构造，输入为：
+- `functions/predict_nominal_response.m`
 
-- `measuredState`
+输入：
+
+- `currentState`
 - `commandedInput`
-- `nominalPrediction`
+- `dt`
+- `nominalParams`
 
-输出包括：
+输出：
+
+- `predictedVel`
+- `predictedAngRate`
+- `predictedAttitude`
+- `predictedAccel`
+
+当前实现基于简化固定翼模型，是一个工程化名义预测器。
+
+局限：
+
+- 不是严格观测器
+- 不是滤波器意义上的最优估计
+- 当前更适合做统一残差基准，而不是高精度状态估计
+
+TODO：
+
+- 后续可替换为 EKF / UKF / MHE / 更严格观测器
+
+## P3 残差生成与滤波
+
+残差生成：
+
+- `functions/compute_sensor_residuals.m`
+
+当前残差包括：
 
 - `velResidual`
 - `angRateResidual`
@@ -110,69 +155,100 @@ P2 当前残差由 `compute_sensor_residuals` 构造，输入为：
 - `accelResidual`
 - `controlTrackingResidual`
 
-### 当前 nominalPrediction 构造方式
+残差滤波：
 
-当前 `nominalPrediction` 采用工程化近似方式构造：
+- `functions/filter_residual_sequence.m`
 
-- 无损伤基准轨迹作为状态预测
-- 对应基准控制作为控制预测
-- 速度差分近似构造加速度预测
+当前支持：
 
-这是一种 P2 原型实现，用于先打通 “残差 -> 特征 -> 识别” 链路。
+- `moving_average`
+- `lowpass_placeholder`
+
+说明：
+
+- `moving_average` 为当前默认模式
+- `lowpass_placeholder` 目前仍是工程近似接口
+
+## P3 特征模式
+
+特征工程由：
+
+- `functions/build_identifier_features.m`
+
+当前支持：
+
+- `summary`
+- `sequence`
+- `summary_plus_residual_energy`
+- `summary_plus_cross_channel_stats`
+- `hybrid_sequence_summary`
+
+### 各模式含义
+
+- `summary`：基础统计摘要
+- `sequence`：原始序列堆叠
+- `summary_plus_residual_energy`：摘要 + 残差能量与峰值
+- `summary_plus_cross_channel_stats`：摘要 + 残差能量 + 输入/状态相关性摘要
+- `hybrid_sequence_summary`：同时输出
+  - `summaryFeatures`
+  - `sequenceFeatures`
+
+适用场景：
+
+- 线性/浅层模型：优先 `summary` 系列
+- 时序模型占位：优先 `hybrid_sequence_summary` 或 `sequence`
+
+## P3 多模型训练框架
+
+训练配置入口：
+
+- `functions/get_identifier_model_config.m`
+
+当前支持模型类型：
+
+- `ridge`
+- `shallow_mlp`
+- `sequence_mlp_placeholder`
+- `ensemble_summary`
+
+训练入口：
+
+- `functions/train_damage_identifier.m`
+
+推理入口：
+
+- `functions/run_damage_identifier.m`
+
+当前支持：
+
+- 训练/验证/测试划分
+- 特征归一化
+- MAE / RMSE 统计
+- sequence 模型占位接口
 
 TODO：
 
-- 后续可替换为更严格的观测器、状态估计器或模型预测器
-- 后续可改为直接使用 Simulink 日志的真实 nominal/measured 对照
+- `sequence_mlp_placeholder` 后续替换为真正的 LSTM / TCN / Transformer 时序识别器
 
-## 识别特征模式
+## Confidence / Uncertainty 说明
 
-`build_identifier_features` 当前支持两种模式：
+识别器当前输出：
 
-- `summary`
-  - 均值
-  - 方差
-  - 最大绝对值
-  - 首末斜率
-  - 能量
-- `sequence`
-  - 原始序列堆叠
+- `confidence`
+- `uncertaintyScore`
 
-当前默认使用 `summary`。
+当前定义是工程近似，不代表严格概率置信度。
 
-## 时序识别数据集结构
+当前近似来源：
 
-P2 数据集文件：
+- 与训练样本的邻近度
+- 模型成员间差异占位
+- 特征偏离训练分布程度
 
-- `data/identifier_dataset.mat`
+用途：
 
-结构形式：
-
-- `identifierDataset.config`
-- `identifierDataset.samples(i).theta_d`
-- `identifierDataset.samples(i).eta_target`
-- `identifierDataset.samples(i).time`
-- `identifierDataset.samples(i).stateHist`
-- `identifierDataset.samples(i).inputHist`
-- `identifierDataset.samples(i).residualHist`
-- `identifierDataset.samples(i).featureSummary`
-- `identifierDataset.samples(i).scenarioInfo`
-
-当前样本量不大，但代码结构已可扩展到更大规模生成。
-
-## 基线识别器说明
-
-P2 当前实现了两个基线模型接口：
-
-1. 岭回归
-2. 浅层 MLP 接口
-
-实现文件：
-
-- `functions/train_damage_identifier.m`
-- `functions/run_damage_identifier.m`
-
-默认主模型为岭回归。若本机 MATLAB 可用 `fitrnet`，则可训练浅层 MLP；否则自动回退到可运行基线。
+- 低置信度时，`decision_manager` 不直接给出激进的 `RETURN`
+- 高不确定性时，决策更偏保守
 
 ## Oracle Mode 与 Identified Mode
 
@@ -187,50 +263,100 @@ P2 当前实现了两个基线模型接口：
 
 ### Identified Mode
 
-- 从残差特征构造识别器输入
-- 运行基线识别器得到 `eta_hat`
-- 由 `eta_hat` 构造 `ctrlMetrics` 估计值
+- 从残差与特征生成识别器输入
+- 运行识别器得到 `eta_hat`
+- 由 `eta_hat` 构造估计的 `ctrlMetrics`
 - 再进入：
   - `evaluate_trim_feasibility`
   - `decision_manager`
 
-P2 当前主要用于比较：
+## 危险决策失配定义
 
-- 识别值驱动评估/决策
-- 真值损伤驱动评估/决策
+当前定义为以下任一情况：
 
-相关文件：
+- `oracle = UNRECOVERABLE / EGRESS_PREP`，但 `identified = RETURN`
+- `oracle = DIVERT / STABILIZE`，但 `identified = RETURN` 且 `confidence` 较高
 
-- `functions/run_online_assessment_pipeline.m`
+相关评估脚本：
+
 - `scripts/run_identifier_closed_loop_batch.m`
+- `scripts/evaluate_decision_consistency.m`
 
-## Simulink 接入说明
+## 数据集说明
 
-主模型 `main_damaged_aircraft.slx` 已预留：
+### P1 摘要数据集
+
+- `data/damage_dataset.mat`
+
+### P2/P3 识别器数据集
+
+- `data/identifier_dataset.mat`
+
+当前数据集版本：
+
+- `identifier_dataset_v2`
+
+每个样本至少包含：
+
+- `theta_d`
+- `eta_target`
+- `time`
+- `stateHist`
+- `inputHist`
+- `nominalPredictionHist`
+- `residualHist`
+- `residualFilteredHist`
+- `featureSummary`
+- `featureModeReadyData`
+- `scenarioInfo`
+- `datasetSplitTag`
+
+当前增强内容：
+
+- 更长时间窗
+- 多初始状态
+- 多控制激励
+- 多扰动类型
+
+## 主模型部署接口
+
+主模型 `main_damaged_aircraft.slx` 已包含：
 
 - `Online Damage Identifier`
 
-当前接入方式：
+当前接口形式：
 
-- 子系统输入：`sensor_bus`、`theta_d`
-- 当前内部输出：基于 `theta_d` 的占位 `eta_hat`
+- 输入：
+  - 状态摘要
+  - 控制输入
+  - 残差/特征摘要占位
+  - `theta_d`
+- 输出：
+  - `eta_hat`
+  - `confidence`
 
-这是一条显式的识别器部署接口，用于保证模型结构完整、命名明确、可继续替换。
+当前仍属于 prototype deployment：
 
-TODO：
+- 内部仍使用占位推理桥接
+- 还没有将训练得到的真实识别器直接部署到 Simulink 在线推理
 
-- 后续替换为真正基于残差摘要或时序特征的在线识别器
-- 后续可替换为 MATLAB Function block、From Workspace、或导出的训练模型推理模块
+后续替换路径：
+
+- MATLAB Function block 推理
+- From Workspace 驱动
+- 导出的浅层网络/查表推理模块
 
 ## 建议运行顺序
 
-P2 建议运行顺序：
+P3 建议运行顺序：
 
 1. `init_project`
 2. `generate_identifier_dataset`
-3. `evaluate_identifier`
-4. `run_identifier_closed_loop_batch`
-5. 打开 `main_damaged_aircraft.slx` 查看接口
+3. `benchmark_identifier_models`
+4. `evaluate_identifier`
+5. `run_identifier_closed_loop_batch`
+6. `evaluate_decision_consistency`
+7. 打开 `main_damaged_aircraft.slx` 查看 `Online Damage Identifier` 接口
 
 示例命令：
 
@@ -238,37 +364,36 @@ P2 建议运行顺序：
 openProject('C:/Users/22149/Desktop/FC')
 run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
 generate_identifier_dataset
+benchmark_identifier_models
 evaluate_identifier
 run_identifier_closed_loop_batch
+evaluate_decision_consistency
 open_system('C:/Users/22149/Desktop/FC/models/main_damaged_aircraft.slx')
 ```
 
-## 主要文件说明
+## 当前关键文件
 
-### P1 核心文件
+### P3 新增或升级的核心函数
 
-- `functions/parse_damage_vector.m`
-- `functions/map_damage_to_aero_effects.m`
-- `functions/compute_control_authority_metrics.m`
-- `functions/evaluate_trim_feasibility.m`
-- `functions/decision_manager.m`
-- `scripts/run_batch_scenarios.m`
-- `scripts/generate_damage_dataset.m`
-- `scripts/postprocess_results.m`
-
-### P2 新增文件
-
-- `functions/get_identifier_target_config.m`
+- `functions/predict_nominal_response.m`
+- `functions/filter_residual_sequence.m`
+- `functions/get_identifier_model_config.m`
 - `functions/compute_sensor_residuals.m`
 - `functions/build_identifier_features.m`
-- `functions/build_default_damage_scenarios.m`
-- `functions/simulate_identifier_timeseries.m`
 - `functions/train_damage_identifier.m`
 - `functions/run_damage_identifier.m`
 - `functions/run_online_assessment_pipeline.m`
-- `functions/ctrl_metrics_from_eta_hat.m`
-- `functions/estimate_damage_effects_from_eta_hat.m`
-- `functions/online_identifier_placeholder_vector.m`
+
+### P3 新增脚本
+
+- `scripts/benchmark_identifier_models.m`
+- `scripts/evaluate_decision_consistency.m`
+
+### 已有 P1/P2 脚本继续沿用
+
+- `scripts/run_batch_scenarios.m`
+- `scripts/generate_damage_dataset.m`
+- `scripts/postprocess_results.m`
 - `scripts/generate_identifier_dataset.m`
 - `scripts/evaluate_identifier.m`
 - `scripts/run_identifier_closed_loop_batch.m`
@@ -276,7 +401,6 @@ open_system('C:/Users/22149/Desktop/FC/models/main_damaged_aircraft.slx')
 ## 后续扩展建议
 
 - 用真实 Simulink 日志替换当前工程近似的时序残差
-- 将 `eta_hat` 基线模型替换为 LSTM / TCN / Transformer 时序识别器
-- 扩展 `theta_d_hat` 直接识别路径
-- 将 `Online Damage Identifier` 子系统替换为真正在线推理模块
-- 引入更高保真的气动、配平与任务级模式机
+- 将 `sequence_mlp_placeholder` 替换为真正时序网络
+- 将 `Online Damage Identifier` 子系统替换为真实在线推理模块
+- 引入更高保真的气动、配平求解和任务级模式机

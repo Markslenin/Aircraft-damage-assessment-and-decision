@@ -1,5 +1,5 @@
 function closedLoopSummary = run_identifier_closed_loop_batch()
-%RUN_IDENTIFIER_CLOSED_LOOP_BATCH Compare oracle and identified decisions.
+%RUN_IDENTIFIER_CLOSED_LOOP_BATCH Compare oracle and identified pipelines.
 
 rootDir = fileparts(fileparts(mfilename('fullpath')));
 run(fullfile(rootDir, 'scripts', 'init_project.m'));
@@ -38,6 +38,10 @@ for i = 1:numel(identifierDataset.samples)
         identifiedResult.identified.ctrlMetrics.eta_yaw, ...
         identifiedResult.identified.ctrlMetrics.eta_total];
 
+    oracleDecision = oracleResult.oracle.decisionOutput.mode;
+    identifiedDecision = identifiedResult.identified.decisionOutput.mode;
+    dangerousMismatch = is_dangerous_mismatch(oracleDecision, identifiedDecision, identifiedResult.identified.identifierOutput.confidence);
+
     closedLoopSummary(i).scenarioId = i;
     closedLoopSummary(i).scenarioType = identifierDataset.samples(i).scenarioInfo.scenarioType;
     closedLoopSummary(i).severity = identifierDataset.samples(i).scenarioInfo.severity;
@@ -45,15 +49,19 @@ for i = 1:numel(identifierDataset.samples)
     closedLoopSummary(i).etaTrue = etaTrue;
     closedLoopSummary(i).etaHat = etaHat;
     closedLoopSummary(i).etaErrorMean = mean(abs(etaHat - etaTrue));
-    closedLoopSummary(i).oracleDecision = oracleResult.oracle.decisionOutput.mode;
-    closedLoopSummary(i).identifiedDecision = identifiedResult.identified.decisionOutput.mode;
+    closedLoopSummary(i).oracleDecision = oracleDecision;
+    closedLoopSummary(i).identifiedDecision = identifiedDecision;
     closedLoopSummary(i).decisionMatch = identifiedResult.decisionMatch;
     closedLoopSummary(i).controllabilityMatch = identifiedResult.controllabilityMatch;
     closedLoopSummary(i).trimRiskOracle = oracleResult.oracle.trimInfo.trimRiskLevel;
     closedLoopSummary(i).trimRiskIdentified = identifiedResult.identified.trimInfo.trimRiskLevel;
-    closedLoopSummary(i).trimInfoConsistency = strcmpi( ...
-        oracleResult.oracle.trimInfo.trimRiskLevel, identifiedResult.identified.trimInfo.trimRiskLevel) ...
-        && oracleResult.oracle.trimInfo.is_trimmable == identifiedResult.identified.trimInfo.is_trimmable;
+    closedLoopSummary(i).trimInfoConsistency = identifiedResult.trimMatch;
+    closedLoopSummary(i).oracleIsTrimmable = oracleResult.oracle.trimInfo.is_trimmable;
+    closedLoopSummary(i).identifiedIsTrimmable = identifiedResult.identified.trimInfo.is_trimmable;
+    closedLoopSummary(i).identifierConfidence = identifiedResult.identified.identifierOutput.confidence;
+    closedLoopSummary(i).identifierUncertainty = identifiedResult.identified.identifierOutput.uncertaintyScore;
+    closedLoopSummary(i).conservativeDecision = is_conservative(oracleDecision, identifiedDecision);
+    closedLoopSummary(i).dangerousMismatch = dangerousMismatch;
 end
 
 summaryTable = closed_loop_table(closedLoopSummary);
@@ -64,7 +72,21 @@ writetable(summaryTable, fullfile(rootDir, 'results', 'identifier_closed_loop_ba
 fprintf('Closed-loop identifier batch complete.\n');
 fprintf('Average eta error: %.4f\n', mean([closedLoopSummary.etaErrorMean]));
 fprintf('Decision match rate: %.2f%%\n', 100 * mean([closedLoopSummary.decisionMatch]));
-fprintf('Controllability match rate: %.2f%%\n', 100 * mean([closedLoopSummary.controllabilityMatch]));
+fprintf('Controllability classification match rate: %.2f%%\n', 100 * mean([closedLoopSummary.controllabilityMatch]));
+end
+
+function tf = is_conservative(oracleDecision, identifiedDecision)
+order = containers.Map( ...
+    {'NORMAL', 'RETURN', 'DIVERT', 'STABILIZE', 'EGRESS_PREP', 'UNRECOVERABLE'}, ...
+    [1 2 3 4 5 6]);
+tf = order(upper(identifiedDecision)) >= order(upper(oracleDecision));
+end
+
+function tf = is_dangerous_mismatch(oracleDecision, identifiedDecision, confidence)
+oracleDecision = upper(oracleDecision);
+identifiedDecision = upper(identifiedDecision);
+tf = (any(strcmp(oracleDecision, {'UNRECOVERABLE', 'EGRESS_PREP'})) && strcmp(identifiedDecision, 'RETURN')) || ...
+    (any(strcmp(oracleDecision, {'DIVERT', 'STABILIZE'})) && strcmp(identifiedDecision, 'RETURN') && confidence > 0.7);
 end
 
 function entry = empty_closed_loop_entry()
@@ -82,7 +104,13 @@ entry = struct( ...
     'controllabilityMatch', false, ...
     'trimRiskOracle', '', ...
     'trimRiskIdentified', '', ...
-    'trimInfoConsistency', false);
+    'trimInfoConsistency', false, ...
+    'oracleIsTrimmable', false, ...
+    'identifiedIsTrimmable', false, ...
+    'identifierConfidence', NaN, ...
+    'identifierUncertainty', NaN, ...
+    'conservativeDecision', false, ...
+    'dangerousMismatch', false);
 end
 
 function tbl = closed_loop_table(summary)
@@ -97,6 +125,12 @@ tbl = table( ...
     [summary.decisionMatch].', ...
     [summary.controllabilityMatch].', ...
     [summary.trimInfoConsistency].', ...
+    [summary.conservativeDecision].', ...
+    [summary.dangerousMismatch].', ...
+    [summary.identifierConfidence].', ...
+    [summary.identifierUncertainty].', ...
     'VariableNames', {'scenarioId', 'scenarioType', 'severity', 'etaErrorMean', ...
-    'oracleDecision', 'identifiedDecision', 'decisionMatch', 'controllabilityMatch', 'trimInfoConsistency'});
+    'oracleDecision', 'identifiedDecision', 'decisionMatch', 'controllabilityMatch', ...
+    'trimInfoConsistency', 'conservativeDecision', 'dangerousMismatch', ...
+    'identifierConfidence', 'identifierUncertainty'});
 end

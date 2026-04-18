@@ -16,9 +16,17 @@ end
 if ~isfield(currentFlightCondition, 'damageSeverity')
     currentFlightCondition.damageSeverity = 0.0;
 end
+if ~isfield(currentFlightCondition, 'identifierConfidence')
+    currentFlightCondition.identifierConfidence = 1.0;
+end
+if ~isfield(currentFlightCondition, 'identifierUncertainty')
+    currentFlightCondition.identifierUncertainty = 0.0;
+end
 
 etaTotal = ctrlMetrics.eta_total;
 damageSeverity = currentFlightCondition.damageSeverity;
+confidence = currentFlightCondition.identifierConfidence;
+uncertainty = currentFlightCondition.identifierUncertainty;
 
 if ~ctrlMetrics.is_controllable
     mode = 'UNRECOVERABLE';
@@ -62,11 +70,25 @@ else
     rationale = 'Residual total authority is too low for safe recovery planning.';
 end
 
+if confidence < 0.45 || uncertainty > 0.65
+    if strcmp(mode, 'RETURN')
+        mode = 'STABILIZE';
+        commandType = 'SAFE_HOLD';
+        rationale = 'Identifier confidence is low, so return is downgraded to stabilize.';
+    elseif strcmp(mode, 'NORMAL')
+        mode = 'DIVERT';
+        commandType = 'DIVERT_PROFILE';
+        rationale = 'Identifier uncertainty is high, so a conservative divert mode is preferred.';
+    end
+end
+
 decisionOutput = struct();
 decisionOutput.mode = mode;
 decisionOutput.commandType = commandType;
 decisionOutput.rationale = rationale;
 decisionOutput.modeCode = mode_to_code(mode);
+decisionOutput.identifierConfidence = confidence;
+decisionOutput.identifierUncertainty = uncertainty;
 end
 
 function code = mode_to_code(mode)
