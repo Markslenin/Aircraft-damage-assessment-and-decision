@@ -1,9 +1,15 @@
 # Système d'identification en ligne et de décision pour avion endommagé ✈️🔥🛠️
 
 <p align="right">
-  <a href="/C:/Users/22149/Desktop/FC/README.md">English</a> | 
-  <a href="/C:/Users/22149/Desktop/FC/README.zh-CN.md">简体中文</a> | 
-  <a href="/C:/Users/22149/Desktop/FC/README.fr.md">Français</a>
+  <a href="./README.md">English</a> | 
+  <a href="./README.zh-CN.md">简体中文</a> | 
+  <a href="./README.fr.md">Français</a>
+</p>
+
+<p align="center">
+  <img alt="MATLAB" src="https://img.shields.io/badge/MATLAB-Research%20Prototype-orange">
+  <img alt="Simulink" src="https://img.shields.io/badge/Simulink-Closed--Loop%20Workflow-blue">
+  <img alt="Status" src="https://img.shields.io/badge/Status-P3.5%20%2B%20P4--lite-success">
 </p>
 
 > Un prototype MATLAB/Simulink qui répond à une question un peu dramatique, mais franchement utile :
@@ -26,6 +32,15 @@ Le socle actuel du projet comprend :
 - logique de décision protégée par un score de confiance
 - benchmark, décomposition d'erreur, sensibilité et cohérence en boucle fermée
 - interface prototype côté Simulink et support de visualisation
+
+## Navigation Rapide
+
+- [Vue d'ensemble du système](#2-vue-densemble-du-système)
+- [Méthode](#5-méthode)
+- [Données et artefacts](#6-données-et-artefacts)
+- [Workflow recommandé](#8-workflow-recommandé)
+- [Scripts clés](#9-scripts-clés)
+- [Pour aller plus loin](#13-pour-aller-plus-loin)
 
 ---
 
@@ -436,10 +451,10 @@ Et non, il ne prétend pas être un calculateur de vol certifié avec un ego sur
 
 ## 13. Pour aller plus loin
 
-- Notes techniques détaillées : [docs/README.md](/C:/Users/22149/Desktop/FC/docs/README.md)
-- Notes d'architecture : [docs/system_architecture.md](/C:/Users/22149/Desktop/FC/docs/system_architecture.md)
-- Flux du programme : [docs/program_flow.md](/C:/Users/22149/Desktop/FC/docs/program_flow.md)
-- Flux de présentation : [docs/presentation_flow.md](/C:/Users/22149/Desktop/FC/docs/presentation_flow.md)
+- Notes techniques détaillées : [docs/README.md](./docs/README.md)
+- Notes d'architecture : [docs/system_architecture.md](./docs/system_architecture.md)
+- Flux du programme : [docs/program_flow.md](./docs/program_flow.md)
+- Flux de présentation : [docs/presentation_flow.md](./docs/presentation_flow.md)
 
 ---
 

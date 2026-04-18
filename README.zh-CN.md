@@ -1,9 +1,15 @@
 # 受损固定翼飞行器在线识别与任务决策系统 ✈️🔥🛠️
 
 <p align="right">
-  <a href="/C:/Users/22149/Desktop/FC/README.md">English</a> | 
-  <a href="/C:/Users/22149/Desktop/FC/README.zh-CN.md">简体中文</a> | 
-  <a href="/C:/Users/22149/Desktop/FC/README.fr.md">Français</a>
+  <a href="./README.md">English</a> | 
+  <a href="./README.zh-CN.md">简体中文</a> | 
+  <a href="./README.fr.md">Français</a>
+</p>
+
+<p align="center">
+  <img alt="MATLAB" src="https://img.shields.io/badge/MATLAB-Research%20Prototype-orange">
+  <img alt="Simulink" src="https://img.shields.io/badge/Simulink-Closed--Loop%20Workflow-blue">
+  <img alt="Status" src="https://img.shields.io/badge/Status-P3.5%20%2B%20P4--lite-success">
 </p>
 
 > 一个略带戏剧性、但确实很实际的 MATLAB/Simulink 原型项目：
@@ -26,6 +32,15 @@
 - 带置信度保护的任务决策逻辑
 - benchmark、误差分解、敏感性和闭环一致性分析
 - Simulink 侧的在线接口与可视化支持
+
+## 快速导航
+
+- [系统总览](#2-系统总览)
+- [方法](#5-方法)
+- [数据与结果](#6-数据与结果)
+- [推荐使用流程](#8-推荐使用流程)
+- [关键脚本](#9-关键脚本)
+- [延伸阅读](#13-延伸阅读)
 
 ---
 
@@ -434,10 +449,10 @@ export_model_snapshots
 
 ## 13. 延伸阅读
 
-- 详细技术文档：[docs/README.md](/C:/Users/22149/Desktop/FC/docs/README.md)
-- 系统架构说明：[docs/system_architecture.md](/C:/Users/22149/Desktop/FC/docs/system_architecture.md)
-- 程序流程说明：[docs/program_flow.md](/C:/Users/22149/Desktop/FC/docs/program_flow.md)
-- 汇报流程说明：[docs/presentation_flow.md](/C:/Users/22149/Desktop/FC/docs/presentation_flow.md)
+- 详细技术文档：[docs/README.md](./docs/README.md)
+- 系统架构说明：[docs/system_architecture.md](./docs/system_architecture.md)
+- 程序流程说明：[docs/program_flow.md](./docs/program_flow.md)
+- 汇报流程说明：[docs/presentation_flow.md](./docs/presentation_flow.md)
 
 ---
 

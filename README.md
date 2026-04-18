@@ -1,9 +1,15 @@
 # Damaged Fixed-Wing Aircraft Online Identification and Decision System ✈️🔥🛠️
 
 <p align="right">
-  <a href="/C:/Users/22149/Desktop/FC/README.md">English</a> | 
-  <a href="/C:/Users/22149/Desktop/FC/README.zh-CN.md">简体中文</a> | 
-  <a href="/C:/Users/22149/Desktop/FC/README.fr.md">Français</a>
+  <a href="./README.md">English</a> | 
+  <a href="./README.zh-CN.md">简体中文</a> | 
+  <a href="./README.fr.md">Français</a>
+</p>
+
+<p align="center">
+  <img alt="MATLAB" src="https://img.shields.io/badge/MATLAB-Research%20Prototype-orange">
+  <img alt="Simulink" src="https://img.shields.io/badge/Simulink-Closed--Loop%20Workflow-blue">
+  <img alt="Status" src="https://img.shields.io/badge/Status-P3.5%20%2B%20P4--lite-success">
 </p>
 
 > A MATLAB/Simulink research prototype for answering one slightly dramatic but very practical question:
@@ -26,6 +32,15 @@ The current project baseline covers:
 - confidence-aware mission decision logic
 - benchmark, error breakdown, sensitivity, and closed-loop consistency analysis
 - Simulink-side prototype interface and visualization support
+
+## Quick Navigation
+
+- [System Overview](#2-system-overview)
+- [Method](#5-method)
+- [Data and Artifacts](#6-data-and-artifacts)
+- [Recommended Workflow](#8-recommended-workflow)
+- [Key Scripts](#9-key-scripts)
+- [Further Reading](#13-further-reading)
 
 ---
 
@@ -435,10 +450,10 @@ No, it is not pretending to be a certified flight computer with feelings of gran
 
 ## 13. Further Reading
 
-- Detailed technical notes: [docs/README.md](/C:/Users/22149/Desktop/FC/docs/README.md)
-- Architecture notes: [docs/system_architecture.md](/C:/Users/22149/Desktop/FC/docs/system_architecture.md)
-- Program flow: [docs/program_flow.md](/C:/Users/22149/Desktop/FC/docs/program_flow.md)
-- Presentation flow: [docs/presentation_flow.md](/C:/Users/22149/Desktop/FC/docs/presentation_flow.md)
+- Detailed technical notes: [docs/README.md](./docs/README.md)
+- Architecture notes: [docs/system_architecture.md](./docs/system_architecture.md)
+- Program flow: [docs/program_flow.md](./docs/program_flow.md)
+- Presentation flow: [docs/presentation_flow.md](./docs/presentation_flow.md)
 
 ---
 
