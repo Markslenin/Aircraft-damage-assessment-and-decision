@@ -72,16 +72,30 @@ The project tries to answer four questions:
 ### 2.2 End-to-End Pipeline
 
 ```mermaid
-flowchart LR
-    A["Damage Vector / Flight Scenario"] --> B["Nominal Predictor"]
-    B --> C["Sensor Residuals"]
-    C --> D["Residual Filtering"]
-    D --> E["Feature Builder"]
-    E --> F["Damage / Eta Identifier"]
-    F --> G["Controllability Metrics"]
-    G --> H["Trim Feasibility"]
-    H --> I["Decision Manager"]
-    I --> J["Closed-Loop Evaluation & Figures"]
+flowchart TD
+    subgraph Offline["Offline model preparation"]
+        A["Damage scenarios"] --> B["Nominal predictor"]
+        B --> C["Residual and feature dataset"]
+        C --> D["Identifier training / sweep"]
+    end
+
+    subgraph Online["Online assessment chain"]
+        E["Normal flight"] --> F["Damage injection"]
+        F --> G["Residual filtering"]
+        G --> H["Eta identifier"]
+        H --> I["Control authority"]
+        I --> J["Trim feasibility"]
+        J --> K["Decision manager"]
+    end
+
+    subgraph Outputs["Evaluation and presentation"]
+        K --> L["Mode command"]
+        K --> M["Oracle comparison"]
+        H --> M
+        M --> N["Demo figures and CSV summaries"]
+    end
+
+    D --> H
 ```
 
 ### 2.3 One-Line Summary
@@ -322,13 +336,13 @@ The 2026-04-26 run uses NED position integration and bounded predictor states, s
 | `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | yes |
 | `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | yes |
 
-### 6.5 Result Figures and P3.5 Summary
+### 6.5 Demo Figures and P3.5 Summary
 
-![Decision mode distribution](./results/figures/decision_mode_distribution.png)
-
-![Severity vs eta total](./results/figures/severity_vs_eta_total.png)
-
-![Trim feasibility statistics](./results/figures/trim_feasibility_statistics.png)
+| Scenario | Trajectory | Assessment |
+| --- | --- | --- |
+| `MildWingReturn` | ![MildWingReturn trajectory](./results/demo_figures/MildWingReturn_trajectory3d.png) | ![MildWingReturn assessment](./results/demo_figures/MildWingReturn_assessment.png) |
+| `CompoundDivert` | ![CompoundDivert trajectory](./results/demo_figures/CompoundDivert_trajectory3d.png) | ![CompoundDivert assessment](./results/demo_figures/CompoundDivert_assessment.png) |
+| `SevereEgress` | ![SevereEgress trajectory](./results/demo_figures/SevereEgress_trajectory3d.png) | ![SevereEgress assessment](./results/demo_figures/SevereEgress_assessment.png) |
 
 | Metric | Value |
 | --- | ---: |
@@ -337,7 +351,7 @@ The 2026-04-26 run uses NED position integration and bounded predictor states, s
 | Closed-loop decision match rate | 100% |
 | Unsafe undertrigger / dangerous mismatch | 0 / 0 |
 
-See also `docs/system_architecture.md`, `docs/program_flow.md`, and the CSV summaries under `results/`.
+Supplementary plots remain in `results/figures/`; architecture and flow diagrams are in `docs/system_architecture.md` and `docs/program_flow.md`.
 
 ---
 

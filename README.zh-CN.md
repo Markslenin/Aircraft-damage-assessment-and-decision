@@ -72,16 +72,30 @@
 ### 2.2 端到端流程
 
 ```mermaid
-flowchart LR
-    A["损伤向量 / 飞行场景"] --> B["名义预测器"]
-    B --> C["传感器残差"]
-    C --> D["残差滤波"]
-    D --> E["特征构造"]
-    E --> F["损伤 / Eta 识别器"]
-    F --> G["可控性指标"]
-    G --> H["配平可行性"]
-    H --> I["决策管理器"]
-    I --> J["闭环评估与图表输出"]
+flowchart TD
+    subgraph Offline["离线模型准备"]
+        A["损伤场景"] --> B["名义预测器"]
+        B --> C["残差与特征数据集"]
+        C --> D["识别器训练 / 扫描"]
+    end
+
+    subgraph Online["在线评估链路"]
+        E["正常飞行"] --> F["损伤注入"]
+        F --> G["残差滤波"]
+        G --> H["Eta 识别器"]
+        H --> I["控制能力评估"]
+        I --> J["配平可行性"]
+        J --> K["决策管理器"]
+    end
+
+    subgraph Outputs["评估与展示输出"]
+        K --> L["模式指令"]
+        K --> M["Oracle 对比"]
+        H --> M
+        M --> N["Demo 图与 CSV 汇总"]
+    end
+
+    D --> H
 ```
 
 ### 2.3 一句话总结
@@ -321,13 +335,13 @@ eta_hat = [eta_roll_hat, eta_pitch_hat, eta_yaw_hat, eta_total_hat]
 | `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | 是 |
 | `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | 是 |
 
-### 6.5 结果图与 P3.5 汇总
+### 6.5 Demo 图与 P3.5 汇总
 
-![决策模式分布](./results/figures/decision_mode_distribution.png)
-
-![损伤严重度与 eta_total](./results/figures/severity_vs_eta_total.png)
-
-![配平可行性统计](./results/figures/trim_feasibility_statistics.png)
+| 场景 | 轨迹 | 评估 |
+| --- | --- | --- |
+| `MildWingReturn` | ![MildWingReturn 轨迹](./results/demo_figures/MildWingReturn_trajectory3d.png) | ![MildWingReturn 评估](./results/demo_figures/MildWingReturn_assessment.png) |
+| `CompoundDivert` | ![CompoundDivert 轨迹](./results/demo_figures/CompoundDivert_trajectory3d.png) | ![CompoundDivert 评估](./results/demo_figures/CompoundDivert_assessment.png) |
+| `SevereEgress` | ![SevereEgress 轨迹](./results/demo_figures/SevereEgress_trajectory3d.png) | ![SevereEgress 评估](./results/demo_figures/SevereEgress_assessment.png) |
 
 | 指标 | 数值 |
 | --- | ---: |
@@ -336,7 +350,7 @@ eta_hat = [eta_roll_hat, eta_pitch_hat, eta_yaw_hat, eta_total_hat]
 | 闭环决策模式匹配率 | 100% |
 | 不安全低估 / 危险不匹配 | 0 / 0 |
 
-更多框图见 `docs/system_architecture.md`、`docs/program_flow.md`；CSV 汇总见 `results/`。
+补充统计图保留在 `results/figures/`；系统框图见 `docs/system_architecture.md` 和 `docs/program_flow.md`。
 
 ---
 

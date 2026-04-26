@@ -72,16 +72,30 @@ Le projet cherche à répondre à quatre questions :
 ### 2.2 Pipeline de bout en bout
 
 ```mermaid
-flowchart LR
-    A["Vecteur de dommage / scénario de vol"] --> B["Prédicteur nominal"]
-    B --> C["Résidus capteurs"]
-    C --> D["Filtrage des résidus"]
-    D --> E["Construction des caractéristiques"]
-    E --> F["Identificateur dommage / eta"]
-    F --> G["Mesures de contrôlabilité"]
-    G --> H["Faisabilité du trim"]
-    H --> I["Gestionnaire de décision"]
-    I --> J["Évaluation en boucle fermée et figures"]
+flowchart TD
+    subgraph Offline["Préparation hors ligne"]
+        A["Scénarios de dommage"] --> B["Prédicteur nominal"]
+        B --> C["Jeu résidus / caractéristiques"]
+        C --> D["Entraînement / sweep"]
+    end
+
+    subgraph Online["Chaîne d'évaluation en ligne"]
+        E["Vol normal"] --> F["Injection du dommage"]
+        F --> G["Filtrage des résidus"]
+        G --> H["Identificateur eta"]
+        H --> I["Autorité de contrôle"]
+        I --> J["Faisabilité du trim"]
+        J --> K["Gestionnaire de décision"]
+    end
+
+    subgraph Outputs["Évaluation et présentation"]
+        K --> L["Commande de mode"]
+        K --> M["Comparaison oracle"]
+        H --> M
+        M --> N["Figures demo et résumés CSV"]
+    end
+
+    D --> H
 ```
 
 ### 2.3 Résumé en une ligne
@@ -323,13 +337,13 @@ La passe du 2026-04-26 utilise l'intégration NED et des bornes sur le prédicte
 | `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | oui |
 | `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | oui |
 
-### 6.5 Figures de résultats et résumé P3.5
+### 6.5 Figures demo et résumé P3.5
 
-![Distribution des modes de décision](./results/figures/decision_mode_distribution.png)
-
-![Sévérité vs eta_total](./results/figures/severity_vs_eta_total.png)
-
-![Statistiques de faisabilité du trim](./results/figures/trim_feasibility_statistics.png)
+| Scénario | Trajectoire | Évaluation |
+| --- | --- | --- |
+| `MildWingReturn` | ![Trajectoire MildWingReturn](./results/demo_figures/MildWingReturn_trajectory3d.png) | ![Évaluation MildWingReturn](./results/demo_figures/MildWingReturn_assessment.png) |
+| `CompoundDivert` | ![Trajectoire CompoundDivert](./results/demo_figures/CompoundDivert_trajectory3d.png) | ![Évaluation CompoundDivert](./results/demo_figures/CompoundDivert_assessment.png) |
+| `SevereEgress` | ![Trajectoire SevereEgress](./results/demo_figures/SevereEgress_trajectory3d.png) | ![Évaluation SevereEgress](./results/demo_figures/SevereEgress_assessment.png) |
 
 | Métrique | Valeur |
 | --- | ---: |
@@ -338,7 +352,7 @@ La passe du 2026-04-26 utilise l'intégration NED et des bornes sur le prédicte
 | Correspondance des décisions en boucle fermée | 100% |
 | Unsafe undertrigger / dangerous mismatch | 0 / 0 |
 
-Voir aussi `docs/system_architecture.md`, `docs/program_flow.md` et les résumés CSV dans `results/`.
+Les graphiques statistiques complémentaires restent dans `results/figures/`; les diagrammes système sont dans `docs/system_architecture.md` et `docs/program_flow.md`.
 
 ---
 
