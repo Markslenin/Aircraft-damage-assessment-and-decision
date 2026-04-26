@@ -305,6 +305,54 @@ eta_hat = [eta_roll_hat, eta_pitch_hat, eta_yaw_hat, eta_total_hat]
 学术表述叫“可复现实验产物”。  
 大白话叫“用来证明代码不是在关键时刻开始自由发挥的漂亮图片”。 ✅
 
+### 6.4 当前 Demo 时间线与结果
+
+当前 demo 已经按预期链路组织：
+
+```text
+正常飞行 -> 损伤注入 -> 识别 / 评估 -> 决策指令
+```
+
+时间设定：
+
+- 正常飞行：`0.0 s` 到 `3.0 s`
+- 损伤开始：`3.0 s`
+- 损伤爬升：`3.0 s` 到 `4.0 s`
+- 评估 / 决策指令：`5.0 s`
+
+demo 已在 2026-04-26 根据轨迹预测器更新后重新生成。当前位置积分先将机体系速度转换到 NED 坐标，再进行位置积分，并加入工程限幅以避免非物理轨迹发散。
+
+| 场景 | 决策 | `eta_total` | 置信度 | Oracle 匹配 | 损伤时刻 | 决策时刻 | 高度范围 | 速度范围 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `MildWingReturn` | `RETURN` | 0.985 | 0.769 | 是 | 3.0 s | 5.0 s | 617.031-1000.035 m | 32.000-91.234 m/s |
+| `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | 是 | 3.0 s | 5.0 s | 610.082-800.140 m | 31.654-57.238 m/s |
+| `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | 是 | 3.0 s | 5.0 s | 175.968-400.095 m | 29.009-73.579 m/s |
+
+已更新的框图文档：
+
+- `docs/system_architecture.md`
+- `docs/program_flow.md`
+
+### 6.5 当前 P3.5 试验汇总
+
+| 指标 | 数值 |
+| --- | ---: |
+| 最优扫描配置 | `ridge + normalized_summary + moving_average` |
+| 最优 `eta_total` MAE | 0.0247 |
+| 最优扫描决策匹配率 | 100% |
+| 识别器 `eta_total` 测试 MAE | 0.0247 |
+| 识别器 `eta_total` 测试 RMSE | 0.0377 |
+| 闭环决策模式匹配率 | 100% |
+| 不安全低估触发次数 | 0 |
+| 危险不匹配次数 | 0 |
+
+主要结果文件：
+
+- `results/identifier_hyperparam_sweep_summary.csv`
+- `results/identifier_eval_summary.csv`
+- `results/decision_consistency_v2_summary.csv`
+- `results/decision_sensitivity_summary.csv`
+
 ---
 
 ## 7. 仓库结构
