@@ -29,10 +29,6 @@ for k = 1:numel(configs)
 end
 
 figDir = fullfile(rootDir, 'results', 'figures_identifier');
-if ~exist(figDir, 'dir')
-    mkdir(figDir);
-end
-
 plot_identifier_figures(evalEntries(1), figDir);
 
 summaryTable = vertcat(evalEntries.summaryTable);
@@ -68,8 +64,7 @@ grid on;
 xlabel('eta_{total,true}');
 ylabel('eta_{total,hat}');
 title(sprintf('eta true vs eta hat (%s)', evalEntry.modelType));
-saveas(f1, fullfile(figDir, 'eta_true_vs_hat_scatter.png'));
-close(f1);
+save_figure(f1, fullfile(figDir, 'eta_true_vs_hat_scatter.png'));
 
 f2 = figure('Visible', 'off');
 bar([mean(abs(Yhat - Ytrue), 1); sqrt(mean((Yhat - Ytrue).^2, 1))].');
@@ -79,8 +74,7 @@ legend({'MAE', 'RMSE'}, 'Location', 'northwest');
 grid on;
 ylabel('Error');
 title('Identifier Channel Error Statistics');
-saveas(f2, fullfile(figDir, 'channel_error_statistics.png'));
-close(f2);
+save_figure(f2, fullfile(figDir, 'channel_error_statistics.png'));
 
 cats = categorical(string({testMeta.damageCategory}));
 f3 = figure('Visible', 'off');
@@ -88,6 +82,5 @@ boxplot(abs(Yhat(:, end) - Ytrue(:, end)), cats);
 grid on;
 ylabel('Absolute eta_{total} Error');
 title('eta_{total} Error by Damage Category');
-saveas(f3, fullfile(figDir, 'damage_category_error_distribution.png'));
-close(f3);
+save_figure(f3, fullfile(figDir, 'damage_category_error_distribution.png'));
 end

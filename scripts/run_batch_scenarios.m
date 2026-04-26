@@ -10,6 +10,9 @@ load_system(fullfile(rootDir, 'models', [modelName '.slx']));
 scenarioDefs = build_default_damage_scenarios();
 summary = repmat(empty_summary_entry(), numel(scenarioDefs), 1);
 
+Pcfg = get_project_params();
+trimCommand = Pcfg.control.trim;
+
 for i = 1:numel(scenarioDefs)
     thetaScenario = scenarioDefs(i).theta_d(:);
     assignin('base', 'theta_d', thetaScenario);
@@ -17,7 +20,7 @@ for i = 1:numel(scenarioDefs)
     damageParams = parse_damage_vector(thetaScenario);
     flightCondition = build_flight_condition();
     flightCondition.damageSeverity = damageParams.severity.overall;
-    damageEffects = map_damage_to_aero_effects(damageParams, [], evalin('base', 'P.control.trim'));
+    damageEffects = map_damage_to_aero_effects(damageParams, [], trimCommand);
     ctrlMetrics = compute_control_authority_metrics(damageParams, damageEffects, flightCondition);
     trimInfo = evaluate_trim_feasibility(damageParams, damageEffects, ctrlMetrics, flightCondition);
     decisionOutput = decision_manager(ctrlMetrics, trimInfo, flightCondition);

@@ -382,22 +382,24 @@ Les graphiques statistiques complémentaires restent dans `results/figures/`; le
 
 ### 8.1 Flux de recherche de base
 
+À exécuter depuis la racine du dépôt (le dossier contenant ce README) :
+
 ```matlab
-openProject('C:/Users/22149/Desktop/FC')
-run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
+openProject('DamagedAircraftOnlineIDDecision.prj')   % ou : cd à la racine puis init_project
+run('scripts/init_project.m')
 generate_identifier_dataset
 benchmark_identifier_models
 evaluate_identifier
 run_identifier_closed_loop_batch
 evaluate_decision_consistency
-open_system('C:/Users/22149/Desktop/FC/models/main_damaged_aircraft.slx')
+open_system('models/main_damaged_aircraft.slx')
 ```
 
 ### 8.2 Flux étendu P3.5
 
 ```matlab
-openProject('C:/Users/22149/Desktop/FC')
-run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
+openProject('DamagedAircraftOnlineIDDecision.prj')
+run('scripts/init_project.m')
 generate_identifier_dataset
 run_identifier_hyperparam_sweep
 analyze_identifier_error_breakdown

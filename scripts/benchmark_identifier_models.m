@@ -17,30 +17,30 @@ configs = { ...
     get_identifier_model_config('shallow_mlp', 'summary_plus_residual_energy'), ...
     get_identifier_model_config('sequence_placeholder', 'hybrid_sequence_summary_v2')};
 
-entries = struct('label', {}, 'identifierModel', {}, 'trainingReport', {});
-summaryRows = [];
+nConfigs = numel(configs);
+entries = repmat(struct('label', '', 'identifierModel', [], 'trainingReport', []), nConfigs, 1);
+summaryRows = repmat(struct( ...
+    'label', '', ...
+    'eta_total_mae', 0, 'eta_total_rmse', 0, ...
+    'eta_roll_mae', 0, 'eta_pitch_mae', 0, 'eta_yaw_mae', 0), nConfigs, 1);
 
-for i = 1:numel(configs)
+for i = 1:nConfigs
     [identifierModel, ~, trainingReport] = train_damage_identifier(identifierDataset, configs{i});
     label = sprintf('%s + %s', configs{i}.modelType, configs{i}.featureMode);
     entries(i).label = label;
     entries(i).identifierModel = identifierModel;
     entries(i).trainingReport = trainingReport;
-    summaryRows = [summaryRows; struct( ... %#ok<AGROW>
-        'label', label, ...
-        'eta_total_mae', trainingReport.testMae(end), ...
-        'eta_total_rmse', trainingReport.testRmse(end), ...
-        'eta_roll_mae', trainingReport.testMae(1), ...
-        'eta_pitch_mae', trainingReport.testMae(2), ...
-        'eta_yaw_mae', trainingReport.testMae(3))];
+    summaryRows(i).label = label;
+    summaryRows(i).eta_total_mae = trainingReport.testMae(end);
+    summaryRows(i).eta_total_rmse = trainingReport.testRmse(end);
+    summaryRows(i).eta_roll_mae = trainingReport.testMae(1);
+    summaryRows(i).eta_pitch_mae = trainingReport.testMae(2);
+    summaryRows(i).eta_yaw_mae = trainingReport.testMae(3);
 end
 
 summaryTable = struct2table(summaryRows);
 
 figDir = fullfile(rootDir, 'results', 'figures_identifier_benchmark');
-if ~exist(figDir, 'dir')
-    mkdir(figDir);
-end
 plot_benchmark_figures(entries, summaryTable, identifierDataset, figDir);
 
 benchmarkResult = struct('entries', entries, 'summaryTable', summaryTable);
@@ -57,8 +57,7 @@ xtickangle(25);
 grid on;
 ylabel('eta_{total} MAE');
 title('Benchmark: eta_{total} Error');
-saveas(f1, fullfile(figDir, 'eta_total_error_comparison.png'));
-close(f1);
+save_figure(f1, fullfile(figDir, 'eta_total_error_comparison.png'));
 
 f2 = figure('Visible', 'off');
 vals = [summaryTable.eta_roll_mae, summaryTable.eta_pitch_mae, summaryTable.eta_yaw_mae];
@@ -69,8 +68,7 @@ legend({'eta\_roll', 'eta\_pitch', 'eta\_yaw'}, 'Location', 'northwest');
 grid on;
 ylabel('MAE');
 title('Benchmark: Channel MAE Comparison');
-saveas(f2, fullfile(figDir, 'channel_mae_comparison.png'));
-close(f2);
+save_figure(f2, fullfile(figDir, 'channel_mae_comparison.png'));
 
 testIdx = entries(1).trainingReport.testIdx;
 scenarioTypes = strings(numel(testIdx), 1);
@@ -92,6 +90,5 @@ legend({entries.label}, 'Location', 'northwest');
 grid on;
 ylabel('eta_{total} MAE');
 title('Benchmark: Damage Category Performance');
-saveas(f3, fullfile(figDir, 'damage_category_performance.png'));
-close(f3);
+save_figure(f3, fullfile(figDir, 'damage_category_performance.png'));
 end

@@ -1,9 +1,0 @@
-modelType,featureMode,targetName,trainMae,valMae,testMae,testRmse
-ridge,normalized_summary,eta_roll_hat,0.0256029972380262,0.0266189001638176,0.0279987941753867,0.0420341161093393
-ridge,normalized_summary,eta_pitch_hat,0.0211657562673623,0.0234048167150731,0.0249577120197365,0.0390381693315459
-ridge,normalized_summary,eta_yaw_hat,0.0234970591175696,0.0256371605636881,0.0264917457276145,0.0381831100964336
-ridge,normalized_summary,eta_total_hat,0.0220942258352825,0.023772213382546,0.0247397994607264,0.037701474505364
-ridge,residual_coupling_summary,eta_roll_hat,NaN,NaN,NaN,NaN
-ridge,residual_coupling_summary,eta_pitch_hat,NaN,NaN,NaN,NaN
-ridge,residual_coupling_summary,eta_yaw_hat,NaN,NaN,NaN,NaN
-ridge,residual_coupling_summary,eta_total_hat,NaN,NaN,NaN,NaN

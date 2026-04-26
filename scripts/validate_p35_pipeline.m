@@ -7,7 +7,7 @@ requiredFiles = { ...
     fullfile(rootDir, 'results', 'identifier_hyperparam_sweep.mat'), ...
     fullfile(rootDir, 'results', 'error_breakdown.mat'), ...
     fullfile(rootDir, 'results', 'decision_sensitivity.mat'), ...
-    fullfile(rootDir, 'results', 'decision_consistency_v2.mat')};
+    fullfile(rootDir, 'results', 'decision_consistency.mat')};
 
 missingFiles = requiredFiles(~cellfun(@isfile, requiredFiles));
 validationSummary = struct('missingFiles', {missingFiles});
@@ -19,7 +19,7 @@ end
 
 D = load(requiredFiles{1}, 'identifierDataset');
 H = load(requiredFiles{2}, 'sweepResult');
-C = load(requiredFiles{5}, 'decisionConsistencyV2');
+C = load(requiredFiles{5}, 'decisionConsistency');
 
 datasetOk = isfield(D.identifierDataset, 'samples') && isfield(D.identifierDataset.samples, 'damageCategory') && ...
     isfield(D.identifierDataset.samples, 'datasetVersion');
@@ -29,7 +29,7 @@ validationSummary.datasetOk = datasetOk;
 validationSummary.bestModelConfig = sprintf('%s + %s + %s', bestRow.modelType, bestRow.featureMode, bestRow.residualFilterMode);
 validationSummary.bestEtaTotalMae = bestRow.etaTotalMae;
 validationSummary.bestDecisionMatchRate = bestRow.decisionMatchRate;
-validationSummary.unsafeUndertriggerCount = C.decisionConsistencyV2.unsafeUndertriggerCount;
+validationSummary.unsafeUndertriggerCount = C.decisionConsistency.unsafeUndertriggerCount;
 
 fprintf('P3.5 validation summary\n');
 fprintf('Best model config: %s\n', validationSummary.bestModelConfig);

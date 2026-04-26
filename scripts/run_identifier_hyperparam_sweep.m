@@ -35,9 +35,6 @@ save(fullfile(rootDir, 'results', 'identifier_hyperparam_sweep.mat'), 'sweepResu
 writetable(summaryTable, fullfile(rootDir, 'results', 'identifier_hyperparam_sweep_summary.csv'));
 
 figDir = fullfile(rootDir, 'results', 'figures_hyperparam_sweep');
-if ~exist(figDir, 'dir')
-    mkdir(figDir);
-end
 plot_sweep_figures(summaryTable, figDir);
 fprintf('Hyperparameter sweep complete for %d configurations.\n', numel(entries));
 end
@@ -66,7 +63,8 @@ decisionMatch = false(n, 1);
 controllabilityMatch = false(n, 1);
 for i = 1:n
     sample = identifierDataset.samples(testIdx(i));
-    result = run_online_assessment_pipeline(sample.theta_d, identifierModel, identifierModel.config, 'identified', sample.scenarioInfo);
+    % Reuse the cached sample to bypass simulate_identifier_timeseries.
+    result = run_online_assessment_pipeline(sample.theta_d, identifierModel, identifierModel.config, 'identified', sample.scenarioInfo, sample);
     decisionMatch(i) = result.decisionMatch;
     controllabilityMatch(i) = result.controllabilityMatch;
 end
@@ -99,8 +97,7 @@ xtickangle(35);
 grid on;
 ylabel('eta_{total} MAE');
 title('Hyperparameter Sweep Ranking by eta_{total} MAE');
-saveas(f1, fullfile(figDir, 'eta_total_mae_ranking.png'));
-close(f1);
+save_figure(f1, fullfile(figDir, 'eta_total_mae_ranking.png'));
 
 f2 = figure('Visible', 'off');
 bar(summaryTable.decisionMatchRate);
@@ -109,8 +106,7 @@ xtickangle(35);
 grid on;
 ylabel('Decision Match Rate');
 title('Hyperparameter Sweep Ranking by Decision Match Rate');
-saveas(f2, fullfile(figDir, 'decision_match_rate_ranking.png'));
-close(f2);
+save_figure(f2, fullfile(figDir, 'decision_match_rate_ranking.png'));
 
 [featureCats, ~, iFeature] = unique(summaryTable.featureMode);
 [modelCats, ~, iModel] = unique(summaryTable.modelType);
@@ -124,6 +120,5 @@ colorbar;
 set(gca, 'XTick', 1:numel(featureCats), 'XTickLabel', featureCats, 'YTick', 1:numel(modelCats), 'YTickLabel', modelCats);
 xtickangle(30);
 title('modelType x featureMode Performance Matrix');
-saveas(f3, fullfile(figDir, 'model_feature_performance_matrix.png'));
-close(f3);
+save_figure(f3, fullfile(figDir, 'model_feature_performance_matrix.png'));
 end

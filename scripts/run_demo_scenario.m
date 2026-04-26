@@ -61,7 +61,7 @@ end
 end
 
 function x0 = demo_initial_state(tag)
-Pcfg = evalin('base', 'P');
+Pcfg = get_project_params();
 base = [Pcfg.initial.pned_m(:); Pcfg.initial.uvw_mps(:); Pcfg.initial.euler_rad(:); Pcfg.initial.pqr_rps(:)];
 switch lower(tag)
     case 'gust_entry'

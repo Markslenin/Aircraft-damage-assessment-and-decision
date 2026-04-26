@@ -489,7 +489,7 @@ The current P3.5 artifact set reports:
 Primary result files:
 - `results/identifier_hyperparam_sweep_summary.csv`
 - `results/identifier_eval_summary.csv`
-- `results/decision_consistency_v2_summary.csv`
+- `results/decision_consistency_summary.csv`
 - `results/decision_sensitivity_summary.csv`
 
 ### Model Snapshots
@@ -511,8 +511,9 @@ If Simulink export is restricted on a given machine, the script leaves TODO text
 ## Recommended Run Order
 
 ```matlab
-openProject('C:/Users/22149/Desktop/FC')
-run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
+% Run from the repository root
+openProject('DamagedAircraftOnlineIDDecision.prj')
+run('scripts/init_project.m')
 generate_identifier_dataset
 run_identifier_hyperparam_sweep
 analyze_identifier_error_breakdown
@@ -520,7 +521,7 @@ analyze_decision_sensitivity
 run_identifier_closed_loop_batch
 evaluate_decision_consistency
 validate_p35_pipeline
-open_system('C:/Users/22149/Desktop/FC/models/main_damaged_aircraft.slx')
+open_system('models/main_damaged_aircraft.slx')
 ```
 
 ## Recommended Presentation Order

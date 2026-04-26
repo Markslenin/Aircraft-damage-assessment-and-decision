@@ -5,13 +5,18 @@ rootDir = fileparts(fileparts(mfilename('fullpath')));
 run(fullfile(rootDir, 'scripts', 'init_project.m'));
 
 identifierConfig = get_identifier_target_config();
+% Dataset generation feeds multi-config sweeps that may exercise any of the
+% supported featureModes, so opt in to building all of them up-front.
+identifierConfig.precomputeAllFeatureModes = true;
 scenarioDefs = build_dataset_v3_scenarios();
 initialStates = build_initial_state_variants_v3();
 commandBiases = build_command_bias_variants();
 excitationTypes = {'step_sine', 'chirp_like', 'doublet', 'multisine'};
-windLevels = evalin('base', 'P.environment.windLevels_mps');
+Pcfg = get_project_params();
+windLevels = Pcfg.environment.windLevels_mps;
 
-samples = cell(0, 1);
+totalSamples = numel(scenarioDefs) * numel(initialStates) * numel(commandBiases) * numel(excitationTypes);
+samples = cell(totalSamples, 1);
 idx = 0;
 
 for i = 1:numel(scenarioDefs)
@@ -39,7 +44,7 @@ for i = 1:numel(scenarioDefs)
                 sample.scenarioInfo.excitationType = scenarioInfo.excitationType;
                 sample.scenarioInfo.excitationTypeTag = scenarioInfo.excitationTypeTag;
                 sample.scenarioInfo.windLevel_mps = windLevel;
-                samples{idx, 1} = sample; %#ok<AGROW>
+                samples{idx, 1} = sample;
             end
         end
     end
@@ -54,8 +59,9 @@ identifierDataset.samples = samples;
 identifierDataset.createdOn = datestr(now, 30);
 identifierDataset.notes = 'Balanced P3.5 dataset with broader damage, flight-condition, wind, and excitation coverage.';
 
-save(fullfile(rootDir, 'data', 'identifier_dataset_v3.mat'), 'identifierDataset');
-save(fullfile(rootDir, 'data', 'identifier_dataset.mat'), 'identifierDataset');
+primaryDatasetPath = fullfile(rootDir, 'data', 'identifier_dataset_v3.mat');
+save(primaryDatasetPath, 'identifierDataset');
+copyfile(primaryDatasetPath, fullfile(rootDir, 'data', 'identifier_dataset.mat'));
 fprintf('Identifier dataset v3 saved with %d samples.\n', numel(samples));
 end
 
@@ -93,7 +99,7 @@ def = struct( ...
 end
 
 function variants = build_initial_state_variants_v3()
-Pcfg = evalin('base', 'P');
+Pcfg = get_project_params();
 base = [Pcfg.initial.pned_m(:); Pcfg.initial.uvw_mps(:); Pcfg.initial.euler_rad(:); Pcfg.initial.pqr_rps(:)];
 
 variants = { ...

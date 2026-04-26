@@ -33,7 +33,7 @@ for i = 1:numel(projectDirs)
 end
 
 addpath(fullfile(rootDir, 'scripts'));
-addpath(fullfile(rootDir, 'functions'));
+addpath(genpath(fullfile(rootDir, 'functions')));
 addpath(fullfile(rootDir, 'data'));
 addpath(fullfile(rootDir, 'models'));
 

@@ -381,22 +381,24 @@ Supplementary plots remain in `results/figures/`; architecture and flow diagrams
 
 ### 8.1 Basic Research Flow
 
+Run from the repository root (the directory containing this README):
+
 ```matlab
-openProject('C:/Users/22149/Desktop/FC')
-run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
+openProject('DamagedAircraftOnlineIDDecision.prj')   % or: cd to repo root and run init_project
+run('scripts/init_project.m')
 generate_identifier_dataset
 benchmark_identifier_models
 evaluate_identifier
 run_identifier_closed_loop_batch
 evaluate_decision_consistency
-open_system('C:/Users/22149/Desktop/FC/models/main_damaged_aircraft.slx')
+open_system('models/main_damaged_aircraft.slx')
 ```
 
 ### 8.2 Extended P3.5 Flow
 
 ```matlab
-openProject('C:/Users/22149/Desktop/FC')
-run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
+openProject('DamagedAircraftOnlineIDDecision.prj')
+run('scripts/init_project.m')
 generate_identifier_dataset
 run_identifier_hyperparam_sweep
 analyze_identifier_error_breakdown

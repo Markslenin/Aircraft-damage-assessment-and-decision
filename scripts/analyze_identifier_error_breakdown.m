@@ -11,21 +11,31 @@ end
 
 S = load(sweepPath, 'sweepResult');
 sweepResult = S.sweepResult;
-rows = struct('damageCategory', {}, 'damageSeverityLevel', {}, 'featureMode', {}, 'modelType', {}, 'flightConditionTag', {}, 'etaTotalError', {});
+% Pre-count rows so the struct array can be preallocated rather than grown.
+totalRows = 0;
+for i = 1:numel(sweepResult.entries)
+    totalRows = totalRows + numel(sweepResult.entries(i).trainingReport.testSampleMeta);
+end
+rows = repmat(struct( ...
+    'damageCategory', "", 'damageSeverityLevel', "", ...
+    'featureMode', "", 'modelType', "", ...
+    'flightConditionTag', "", 'etaTotalError', 0), totalRows, 1);
 rowIdx = 0;
 
 for i = 1:numel(sweepResult.entries)
     entry = sweepResult.entries(i);
     meta = entry.trainingReport.testSampleMeta;
     err = entry.trainingReport.Yhat(:, end) - entry.trainingReport.Ytrue(:, end);
+    featureMode = string(entry.config.featureMode);
+    modelType = string(entry.config.modelType);
     for j = 1:numel(meta)
         rowIdx = rowIdx + 1;
-        rows(rowIdx).damageCategory = string(meta(j).damageCategory); %#ok<AGROW>
-        rows(rowIdx).damageSeverityLevel = string(meta(j).damageSeverityLevel); %#ok<AGROW>
-        rows(rowIdx).featureMode = string(entry.config.featureMode); %#ok<AGROW>
-        rows(rowIdx).modelType = string(entry.config.modelType); %#ok<AGROW>
-        rows(rowIdx).flightConditionTag = string(meta(j).flightConditionTag); %#ok<AGROW>
-        rows(rowIdx).etaTotalError = err(j); %#ok<AGROW>
+        rows(rowIdx).damageCategory = string(meta(j).damageCategory);
+        rows(rowIdx).damageSeverityLevel = string(meta(j).damageSeverityLevel);
+        rows(rowIdx).featureMode = featureMode;
+        rows(rowIdx).modelType = modelType;
+        rows(rowIdx).flightConditionTag = string(meta(j).flightConditionTag);
+        rows(rowIdx).etaTotalError = err(j);
     end
 end
 
@@ -42,9 +52,6 @@ save(fullfile(rootDir, 'results', 'error_breakdown.mat'), 'errorBreakdown', 'T')
 writetable(T, fullfile(rootDir, 'results', 'error_breakdown_summary.csv'));
 
 figDir = fullfile(rootDir, 'results', 'figures_error_breakdown');
-if ~exist(figDir, 'dir')
-    mkdir(figDir);
-end
 plot_error_breakdown_figures(T, figDir);
 fprintf('Identifier error breakdown analysis complete.\n');
 end
@@ -55,8 +62,7 @@ boxplot(abs(T.etaTotalError), categorical(T.damageCategory));
 grid on;
 ylabel('Absolute eta_{total} Error');
 title('eta_{total} Error by Damage Category');
-saveas(f1, fullfile(figDir, 'error_boxplot_by_damage_category.png'));
-close(f1);
+save_figure(f1, fullfile(figDir, 'error_boxplot_by_damage_category.png'));
 
 sevOrder = categories(categorical(T.damageSeverityLevel));
 mae = zeros(numel(sevOrder), 1);
@@ -72,8 +78,7 @@ grid on;
 set(gca, 'XTick', 1:numel(sevOrder), 'XTickLabel', sevOrder);
 legend({'MAE', 'RMSE'}, 'Location', 'northwest');
 title('Error vs Damage Severity');
-saveas(f2, fullfile(figDir, 'error_by_damage_severity.png'));
-close(f2);
+save_figure(f2, fullfile(figDir, 'error_by_damage_severity.png'));
 
 [featureCats, ~, iFeature] = unique(T.featureMode);
 [modelCats, ~, iModel] = unique(T.modelType);
@@ -90,6 +95,5 @@ colorbar;
 set(gca, 'XTick', 1:numel(featureCats), 'XTickLabel', featureCats, 'YTick', 1:numel(modelCats), 'YTickLabel', modelCats);
 xtickangle(25);
 title('Model Type and Feature Mode Heatmap');
-saveas(f3, fullfile(figDir, 'model_feature_heatmap.png'));
-close(f3);
+save_figure(f3, fullfile(figDir, 'model_feature_heatmap.png'));
 end

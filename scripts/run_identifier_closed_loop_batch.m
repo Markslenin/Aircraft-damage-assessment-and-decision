@@ -26,8 +26,10 @@ closedLoopSummary = repmat(empty_closed_loop_entry(), numel(identifierDataset.sa
 for i = 1:numel(identifierDataset.samples)
     sample = identifierDataset.samples(i);
     theta_d = sample.theta_d;
-    oracleResult = run_online_assessment_pipeline(theta_d, [], identifierConfig, 'oracle', sample.scenarioInfo);
-    identifiedResult = run_online_assessment_pipeline(theta_d, identifierModel, identifierConfig, 'identified', sample.scenarioInfo);
+    % Reuse the precomputed sample from the dataset to skip the two redundant
+    % simulate_identifier_timeseries calls that the previous version paid for.
+    oracleResult = run_online_assessment_pipeline(theta_d, [], identifierConfig, 'oracle', sample.scenarioInfo, sample);
+    identifiedResult = run_online_assessment_pipeline(theta_d, identifierModel, identifierConfig, 'identified', sample.scenarioInfo, sample);
 
     etaTrue = [ ...
         oracleResult.oracle.ctrlMetrics.eta_roll, ...
@@ -84,8 +86,9 @@ closedLoopResult.decisionMatchRate = mean([closedLoopSummary.decisionMatch]);
 closedLoopResult.controllabilityMatchRate = mean([closedLoopSummary.controllabilityMatch]);
 closedLoopResult.trimMatchRate = mean([closedLoopSummary.trimInfoConsistency]);
 
-save(fullfile(rootDir, 'results', 'identifier_closed_loop_batch.mat'), 'closedLoopSummary', 'summaryTable', 'closedLoopResult');
-save(fullfile(rootDir, 'results', 'identified_vs_oracle_summary.mat'), 'closedLoopSummary', 'summaryTable', 'closedLoopResult');
+primaryResultPath = fullfile(rootDir, 'results', 'identifier_closed_loop_batch.mat');
+save(primaryResultPath, 'closedLoopSummary', 'summaryTable', 'closedLoopResult');
+copyfile(primaryResultPath, fullfile(rootDir, 'results', 'identified_vs_oracle_summary.mat'));
 writetable(summaryTable, fullfile(rootDir, 'results', 'identifier_closed_loop_batch.csv'));
 
 fprintf('Closed-loop identifier batch complete.\n');

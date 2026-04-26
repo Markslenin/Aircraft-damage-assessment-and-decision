@@ -11,7 +11,7 @@ end
 
 S = load(summaryPath, 'summary');
 summary = S.summary;
-Pcfg = evalin('base', 'P');
+Pcfg = get_project_params();
 
 dataset = struct('theta_d', {}, 'initialCondition', {}, 'summaryFeatures', {}, ...
     'ctrlMetrics', {}, 'trimInfo', {}, 'decisionOutput', {});

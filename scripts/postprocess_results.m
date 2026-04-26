@@ -11,9 +11,6 @@ S = load(summaryPath, 'summaryTable');
 summaryTable = S.summaryTable;
 
 figDir = fullfile(rootDir, 'results', 'figures');
-if ~exist(figDir, 'dir')
-    mkdir(figDir);
-end
 
 f1 = figure('Visible', 'off');
 scatter(summaryTable.severity, summaryTable.eta_total, 70, double(categorical(summaryTable.scenarioType)), 'filled');
@@ -21,8 +18,7 @@ grid on;
 xlabel('Damage Severity');
 ylabel('eta\_total');
 title('Damage Severity vs eta\_total');
-saveas(f1, fullfile(figDir, 'severity_vs_eta_total.png'));
-close(f1);
+save_figure(f1, fullfile(figDir, 'severity_vs_eta_total.png'));
 
 f2 = figure('Visible', 'off');
 modeCats = categorical(summaryTable.decisionMode);
@@ -33,8 +29,7 @@ grid on;
 xlabel('Decision Mode');
 ylabel('Count');
 title('Decision Mode Distribution');
-saveas(f2, fullfile(figDir, 'decision_mode_distribution.png'));
-close(f2);
+save_figure(f2, fullfile(figDir, 'decision_mode_distribution.png'));
 
 f3 = figure('Visible', 'off');
 trimCats = categorical(string(summaryTable.is_trimmable), {'true', 'false'}, {'Trimmable', 'Not Trimmable'});
@@ -45,8 +40,7 @@ grid on;
 xlabel('Trim Feasibility');
 ylabel('Count');
 title('Trim Feasibility Statistics');
-saveas(f3, fullfile(figDir, 'trim_feasibility_statistics.png'));
-close(f3);
+save_figure(f3, fullfile(figDir, 'trim_feasibility_statistics.png'));
 
 fprintf('Postprocessing complete. Figures saved to %s\n', figDir);
 end

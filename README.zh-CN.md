@@ -380,22 +380,24 @@ eta_hat = [eta_roll_hat, eta_pitch_hat, eta_yaw_hat, eta_total_hat]
 
 ### 8.1 基础研究流程
 
+从仓库根目录(本 README 所在目录)运行:
+
 ```matlab
-openProject('C:/Users/22149/Desktop/FC')
-run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
+openProject('DamagedAircraftOnlineIDDecision.prj')   % 或:cd 到仓库根目录后直接 run init_project
+run('scripts/init_project.m')
 generate_identifier_dataset
 benchmark_identifier_models
 evaluate_identifier
 run_identifier_closed_loop_batch
 evaluate_decision_consistency
-open_system('C:/Users/22149/Desktop/FC/models/main_damaged_aircraft.slx')
+open_system('models/main_damaged_aircraft.slx')
 ```
 
 ### 8.2 扩展 P3.5 流程
 
 ```matlab
-openProject('C:/Users/22149/Desktop/FC')
-run('C:/Users/22149/Desktop/FC/scripts/init_project.m')
+openProject('DamagedAircraftOnlineIDDecision.prj')
+run('scripts/init_project.m')
 generate_identifier_dataset
 run_identifier_hyperparam_sweep
 analyze_identifier_error_breakdown

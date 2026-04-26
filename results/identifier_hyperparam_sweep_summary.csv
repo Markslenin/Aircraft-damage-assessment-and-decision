@@ -1,7 +1,0 @@
-modelType,featureMode,residualFilterMode,sequenceLength,normalizationMode,etaTotalMae,decisionMatchRate
-ridge,normalized_summary,moving_average,40,zscore,0.0247397994607264,1
-shallow_mlp,normalized_summary,lowpass_placeholder,50,zscore,0.0364120617396566,1
-ridge,residual_coupling_summary,moving_average,50,zscore,0.80080926205918,1
-shallow_mlp,summary_plus_residual_energy,moving_average,40,zscore,0.80080926205918,1
-ensemble_summary,residual_coupling_summary,moving_average,50,zscore,0.80080926205918,1
-sequence_placeholder,hybrid_sequence_summary_v2,moving_average,60,zscore,0.80080926205918,1
