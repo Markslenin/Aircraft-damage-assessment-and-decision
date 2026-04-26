@@ -1,10 +1,18 @@
 function y = simple_aircraft_force_moment_model(z)
 %SIMPLE_AIRCRAFT_FORCE_MOMENT_MODEL Baseline force/moment model for P1.
-%   z = [x(12); u_cmd(4); theta_d(12)]
 %
-% The actuator/propulsion path produces the nominal force and moment set
-% with control/thrust effectiveness applied. Structural damage force/moment
-% deltas are injected separately through damage_injection_interface.
+%   y = simple_aircraft_force_moment_model(z), with
+%       z = [x(12); u_cmd(4); theta_d(12)]    (28 x 1)
+%       y = [F_b_N(3); M_b_Nm(3)]              (6 x 1, body-frame)
+%
+%   The actuator/propulsion path produces the nominal force and moment set
+%   with control / thrust effectiveness applied. Structural damage
+%   force / moment deltas are injected separately through
+%   damage_injection_interface.
+%
+%   Requires P in the base workspace (loaded by scripts/init_project.m).
+%   This is the interpreted-MATLAB-Function used by the
+%   "AirframeForceMoment" Simulink block.
 
 z = z(:);
 

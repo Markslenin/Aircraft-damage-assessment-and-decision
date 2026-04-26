@@ -35,12 +35,39 @@ Le socle actuel du projet comprend :
 
 ## Navigation Rapide
 
+- [Démarrage rapide](#démarrage-rapide)
 - [Vue d'ensemble du système](#2-vue-densemble-du-système)
 - [Méthode](#5-méthode)
 - [Données et artefacts](#6-données-et-artefacts)
 - [Workflow recommandé](#8-workflow-recommandé)
 - [Scripts clés](#9-scripts-clés)
 - [Pour aller plus loin](#13-pour-aller-plus-loin)
+
+---
+
+## Démarrage rapide
+
+Trois lignes pour reproduire la démo depuis un clone propre, à exécuter
+depuis la racine du dépôt sous MATLAB R2023a ou supérieur (Simulink +
+Aerospace Blockset requis pour le modèle, mais les scripts d'analyse
+fonctionnent sans) :
+
+```matlab
+openProject('DamagedAircraftOnlineIDDecision.prj')   % attache les chemins
+run('scripts/init_project.m')                        % charge P, theta_d, g0
+run_demo_scenario                                    % MildWing / CompoundDivert / SevereEgress
+```
+
+`data/identifier_dataset_v3.mat` n'est plus suivi par git ; s'il manque,
+les scripts d'entrée appellent automatiquement `generate_identifier_dataset`
+avant l'évaluation. Pour tout régénérer à partir de zéro :
+
+```matlab
+generate_identifier_dataset    % reconstruit data/identifier_dataset_v3.mat
+run_identifier_hyperparam_sweep
+run_identifier_closed_loop_batch
+evaluate_decision_consistency
+```
 
 ---
 

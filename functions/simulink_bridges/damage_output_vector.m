@@ -1,6 +1,13 @@
 function y = damage_output_vector(z)
 %DAMAGE_OUTPUT_VECTOR Packed interface for Simulink interpreted function use.
-%   z = [x(12); u(4); theta_d(12)]
+%
+%   y = damage_output_vector(z), with
+%       z = [x(12); u(4); theta_d(12)]                (28 x 1, packed input)
+%       y = [deltaF_b_N(3); deltaM_b_Nm(3); eta_ctrl(4)]  (10 x 1, packed output)
+%
+%   Wraps damage_injection_interface so the result fits a single
+%   Interpreted MATLAB Function block. This is the function wired into
+%   the "DamageMap" Simulink block.
 
 z = z(:);
 

@@ -1,5 +1,15 @@
 function ctrlMetrics = ctrl_metrics_from_eta_hat(identifierOutput)
 %CTRL_METRICS_FROM_ETA_HAT Convert eta estimates into ctrlMetrics struct.
+%
+%   ctrlMetrics = ctrl_metrics_from_eta_hat(identifierOutput) takes the
+%   normalized eta-hat fields (eta_roll_hat / eta_pitch_hat / eta_yaw_hat /
+%   eta_total_hat) emitted by run_damage_identifier and packs them into the
+%   same struct shape produced by compute_control_authority_metrics, so
+%   downstream decision logic does not need to branch on which path
+%   (theta or eta) the identifier chose.
+%
+%   The 0.35 eta_total threshold and 0.15 per-axis floor used to set
+%   is_controllable mirror those in compute_control_authority_metrics.
 
 etaRoll = clamp(identifierOutput.eta_roll_hat, 0.0, 1.0);
 etaPitch = clamp(identifierOutput.eta_pitch_hat, 0.0, 1.0);

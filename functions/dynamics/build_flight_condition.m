@@ -1,5 +1,16 @@
 function flightCondition = build_flight_condition(currentState, controlInput)
 %BUILD_FLIGHT_CONDITION Construct a lightweight flight condition structure.
+%
+%   flightCondition = build_flight_condition() returns a nominal struct
+%   built from P.initial in the base workspace.
+%   flightCondition = build_flight_condition(currentState, controlInput)
+%   uses an explicit 12-element state vector and 4-element control vector.
+%
+%   The returned struct exposes airspeed, alpha, beta, dynamic pressure,
+%   altitude, and the raw uvw / euler / pqr blocks. damageSeverity is
+%   initialized to zero and is overwritten by callers as needed.
+%
+%   Requires P in the base workspace (loaded by scripts/init_project.m).
 
 if nargin < 1 || isempty(currentState)
     Pcfg = get_project_params();

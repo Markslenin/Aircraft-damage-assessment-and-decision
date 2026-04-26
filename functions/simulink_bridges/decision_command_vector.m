@@ -1,9 +1,17 @@
 function uCmd = decision_command_vector(theta_d)
 %DECISION_COMMAND_VECTOR Simulink bridge for rule-based command selection.
+%
 %   Input:
-%     theta_d - 12x1 damage vector
+%     theta_d - 12x1 damage vector (in [0, 1])
 %   Output:
 %     uCmd    - 4x1 command vector [de; da; dr; throttle]
+%
+%   Pulls a flight-condition-aware decision from decision_manager and
+%   returns the canonical control command for the chosen mission mode.
+%
+%   Requires P in the base workspace (loaded by scripts/init_project.m);
+%   the function reads it through get_project_params(). This is the
+%   interpreted-MATLAB-Function used by the "DecisionBridge" Simulink block.
 
 if nargin < 1 || isempty(theta_d)
     theta_d = zeros(12, 1);

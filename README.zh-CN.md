@@ -35,12 +35,36 @@
 
 ## 快速导航
 
+- [快速上手](#快速上手)
 - [系统总览](#2-系统总览)
 - [方法](#5-方法)
 - [数据与结果](#6-数据与结果)
 - [推荐使用流程](#8-推荐使用流程)
 - [关键脚本](#9-关键脚本)
 - [延伸阅读](#13-延伸阅读)
+
+---
+
+## 快速上手
+
+在仓库根目录(本 README 所在目录),用 MATLAB R2023a 或更新版本三行复现 demo
+(完整模型需要 Simulink + Aerospace Blockset,纯分析脚本不需要):
+
+```matlab
+openProject('DamagedAircraftOnlineIDDecision.prj')   % 注册路径
+run('scripts/init_project.m')                        % 装载 P, theta_d, g0
+run_demo_scenario                                    % MildWing / CompoundDivert / SevereEgress
+```
+
+`data/identifier_dataset_v3.mat` 不再随 git 跟踪,缺失时入口脚本会自动调用
+`generate_identifier_dataset` 生成。需要从零完整重跑:
+
+```matlab
+generate_identifier_dataset    % 重新生成 data/identifier_dataset_v3.mat
+run_identifier_hyperparam_sweep
+run_identifier_closed_loop_batch
+evaluate_decision_consistency
+```
 
 ---
 

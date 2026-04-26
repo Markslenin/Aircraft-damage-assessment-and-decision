@@ -1,9 +1,17 @@
 function ctrlMetrics = compute_control_authority_metrics(damageParams, damageEffects, flightConditionOrState)
 %COMPUTE_CONTROL_AUTHORITY_METRICS Approximate residual control authority.
+%
 %   eta_roll  : aileron effectiveness minus roll-bias penalty
 %   eta_pitch : elevator effectiveness minus pitch-bias penalty
 %   eta_yaw   : rudder effectiveness minus yaw-bias penalty
 %   eta_total : 0.35*eta_roll + 0.40*eta_pitch + 0.25*eta_yaw
+%
+%   The third argument may be either a flightCondition struct or a raw
+%   state vector; in the latter case build_flight_condition is called.
+%   Output struct is interchangeable with ctrl_metrics_from_eta_hat so the
+%   decision pipeline does not branch on which path produced it.
+%
+%   Requires P in the base workspace (loaded by scripts/init_project.m).
 
 if nargin < 1 || isempty(damageParams)
     damageParams = parse_damage_vector(zeros(12, 1));

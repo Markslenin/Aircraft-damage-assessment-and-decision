@@ -1,5 +1,15 @@
 function damageEffects = estimate_damage_effects_from_eta_hat(identifierOutput, flightCondition)
 %ESTIMATE_DAMAGE_EFFECTS_FROM_ETA_HAT Build approximate effects from eta-hat.
+%
+%   damageEffects = estimate_damage_effects_from_eta_hat(identifierOutput, flightCondition)
+%
+%   Used in the identified pipeline branch when the model returns eta-hats
+%   rather than a full theta_d. Produces a damageEffects struct compatible
+%   with what map_damage_to_aero_effects yields, so downstream
+%   evaluate_trim_feasibility / decision_manager work uniformly across the
+%   theta-mode and eta-mode identifier branches.
+%
+%   Requires P in the base workspace (loaded by scripts/init_project.m).
 
 if nargin < 2 || isempty(flightCondition)
     flightCondition = build_flight_condition();
