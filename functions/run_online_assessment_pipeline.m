@@ -17,7 +17,7 @@ end
 sample = simulate_identifier_timeseries(theta_d, identifierConfig, scenarioInfo);
 Pcfg = evalin('base', 'P');
 flightCondition = build_flight_condition(sample.stateHist(1, :).', sample.inputHist(1, :).');
-flightCondition.damageSeverity = mean(theta_d);
+flightCondition.damageSeverity = scenario_damage_severity(scenarioInfo, mean(theta_d));
 flightCondition.decisionConfig = Pcfg.decision;
 
 oracle = struct();
@@ -93,4 +93,12 @@ function etaHistory = build_eta_history(identifierOutput)
 neighbor = identifierOutput.predictionMeta.neighborMean(:).';
 current = [identifierOutput.eta_roll_hat, identifierOutput.eta_pitch_hat, identifierOutput.eta_yaw_hat, identifierOutput.eta_total_hat];
 etaHistory = [neighbor; current];
+end
+
+function severity = scenario_damage_severity(scenarioInfo, fallbackSeverity)
+severity = fallbackSeverity;
+if isstruct(scenarioInfo) && isfield(scenarioInfo, 'severity') && ~isempty(scenarioInfo.severity)
+    severity = scenarioInfo.severity;
+end
+severity = min(max(severity, 0.0), 1.0);
 end

@@ -41,12 +41,24 @@ euler = currentState(7:9);
 pqr = currentState(10:12);
 
 accelBody = fm(1:3) / mass - cross(pqr, uvw);
+accelBody = clamp_vector(accelBody, -60.0, 60.0);
 angAccel = [fm(4) / inertiaDiag(1); fm(5) / inertiaDiag(2); fm(6) / inertiaDiag(3)];
+angAccel = clamp_vector(angAccel, -4.0, 4.0);
 
 predictedVel = uvw + dt * accelBody;
+speed = norm(predictedVel);
+if speed > 120.0
+    predictedVel = predictedVel * (120.0 / speed);
+end
 predictedAngRate = pqr + dt * angAccel;
-predictedAttitude = euler + dt * pqr;
-predictedPosition = currentState(1:3) + dt * predictedVel;
+predictedAngRate = clamp_vector(predictedAngRate, -1.5, 1.5);
+predictedAttitude = euler + dt * euler_rate_from_body_rates(euler, pqr);
+predictedAttitude(1) = wrapToPiLocal(predictedAttitude(1));
+predictedAttitude(2) = min(max(predictedAttitude(2), deg2rad(-75)), deg2rad(75));
+predictedAttitude(3) = wrapToPiLocal(predictedAttitude(3));
+
+velNed = body_to_ned(euler, predictedVel);
+predictedPosition = currentState(1:3) + dt * velNed;
 predictedState = [predictedPosition; predictedVel; predictedAttitude; predictedAngRate];
 
 nominalPrediction = struct();
@@ -60,4 +72,39 @@ nominalPrediction.predictedAccelHist = accelBody.';
 nominalPrediction.controlHist = commandedInput.';
 nominalPrediction.dt = dt;
 nominalPrediction.predictorName = 'simple_airframe_nominal_predictor';
+end
+
+function y = clamp_vector(x, lo, hi)
+y = min(max(x, lo), hi);
+end
+
+function ned = body_to_ned(euler, body)
+phi = euler(1);
+theta = euler(2);
+psi = euler(3);
+cphi = cos(phi); sphi = sin(phi);
+cth = cos(theta); sth = sin(theta);
+cpsi = cos(psi); spsi = sin(psi);
+
+R_nb = [ ...
+    cth*cpsi, sphi*sth*cpsi - cphi*spsi, cphi*sth*cpsi + sphi*spsi; ...
+    cth*spsi, sphi*sth*spsi + cphi*cpsi, cphi*sth*spsi - sphi*cpsi; ...
+    -sth,     sphi*cth,                  cphi*cth];
+ned = R_nb * body(:);
+end
+
+function eulerRate = euler_rate_from_body_rates(euler, pqr)
+phi = euler(1);
+theta = min(max(euler(2), deg2rad(-80)), deg2rad(80));
+p = pqr(1);
+q = pqr(2);
+r = pqr(3);
+eulerRate = [ ...
+    p + tan(theta) * (q * sin(phi) + r * cos(phi)); ...
+    q * cos(phi) - r * sin(phi); ...
+    (q * sin(phi) + r * cos(phi)) / max(cos(theta), 1.0e-3)];
+end
+
+function angle = wrapToPiLocal(angle)
+angle = mod(angle + pi, 2*pi) - pi;
 end

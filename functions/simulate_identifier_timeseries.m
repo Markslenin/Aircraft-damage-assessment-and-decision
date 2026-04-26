@@ -47,18 +47,25 @@ end
 if ~isfield(scenarioInfo, 'datasetVersion') || isempty(scenarioInfo.datasetVersion)
     scenarioInfo.datasetVersion = 'identifier_dataset_v3';
 end
+if ~isfield(scenarioInfo, 'damageStartTime') || isempty(scenarioInfo.damageStartTime)
+    scenarioInfo.damageStartTime = 0.0;
+end
+if ~isfield(scenarioInfo, 'damageRampDuration') || isempty(scenarioInfo.damageRampDuration)
+    scenarioInfo.damageRampDuration = 1.0;
+end
 
 dt = identifierConfig.sequenceDt;
 t = (0:dt:identifierConfig.historyDuration).';
 N = numel(t);
 
 baseState = repmat(scenarioInfo.initialState(:).', N, 1);
-uCmdBase = repmat((Pcfg.control.modeCommands.NORMAL(:) + scenarioInfo.commandBias(:)).', N, 1);
+uCmdBase = build_command_profile(Pcfg, t, scenarioInfo);
 uCmdBase = apply_excitation(uCmdBase, t, scenarioInfo.excitationType);
+damageGate = build_damage_gate(t, scenarioInfo.damageStartTime, scenarioInfo.damageRampDuration);
 
 damageEffects = map_damage_to_aero_effects(damageParams, scenarioInfo.initialState, uCmdBase(1, :).');
 flightCondition = build_flight_condition(scenarioInfo.initialState, uCmdBase(1, :).');
-flightCondition.damageSeverity = damageParams.severity.overall;
+flightCondition.damageSeverity = scenario_damage_severity(scenarioInfo, damageParams.severity.overall);
 ctrlMetrics = compute_control_authority_metrics(damageParams, damageEffects, flightCondition);
 
 nominalState = zeros(N, 12);
@@ -66,6 +73,7 @@ nominalAccel = zeros(N, 3);
 nominalControl = zeros(N, 4);
 measuredState = zeros(N, 12);
 residualExcitation = scenarioInfo.disturbanceGain * build_disturbance_profile(t, damageParams, ctrlMetrics);
+residualExcitation = residualExcitation .* damageGate;
 windExcitation = build_wind_disturbance_profile(t, scenarioInfo.windLevel_mps);
 
 nominalState(1, :) = scenarioInfo.initialState(:).';
@@ -128,6 +136,7 @@ sample.featureSummary = flatten_feature(selectedFeature);
 sample.featureModeReadyData = featureModeReadyData;
 sample.featureInfo = featureInfo;
 sample.scenarioInfo = scenarioInfo;
+sample.damageGate = damageGate;
 sample.damageCategory = string(scenarioInfo.damageCategory);
 sample.damageSeverityLevel = string(scenarioInfo.damageSeverityLevel);
 sample.excitationType = string(scenarioInfo.excitationType);
@@ -139,6 +148,41 @@ sample.decisionOutput = decisionOutput;
 sample.damageParams = damageParams;
 sample.damageEffects = damageEffects;
 sample.datasetSplitTag = scenarioInfo.splitTag;
+end
+
+function severity = scenario_damage_severity(scenarioInfo, fallbackSeverity)
+severity = fallbackSeverity;
+if isfield(scenarioInfo, 'severity') && ~isempty(scenarioInfo.severity)
+    severity = scenarioInfo.severity;
+end
+severity = min(max(severity, 0.0), 1.0);
+end
+
+function uCmd = build_command_profile(Pcfg, t, scenarioInfo)
+normalCommand = Pcfg.control.modeCommands.NORMAL(:) + scenarioInfo.commandBias(:);
+uCmd = repmat(normalCommand.', numel(t), 1);
+if ~isfield(scenarioInfo, 'decisionMode') || isempty(scenarioInfo.decisionMode)
+    return;
+end
+if ~isfield(scenarioInfo, 'decisionTime') || isempty(scenarioInfo.decisionTime)
+    return;
+end
+
+modeName = upper(char(string(scenarioInfo.decisionMode)));
+if ~isfield(Pcfg.control.modeCommands, modeName)
+    return;
+end
+decisionCommand = Pcfg.control.modeCommands.(modeName)(:) + scenarioInfo.commandBias(:);
+idx = t >= scenarioInfo.decisionTime;
+uCmd(idx, :) = repmat(decisionCommand.', nnz(idx), 1);
+end
+
+function damageGate = build_damage_gate(t, damageStartTime, damageRampDuration)
+if damageRampDuration <= 0
+    damageGate = double(t >= damageStartTime);
+    return;
+end
+damageGate = min(max((t - damageStartTime) ./ damageRampDuration, 0.0), 1.0);
 end
 
 function uCmd = apply_excitation(uCmd, t, excitationType)
