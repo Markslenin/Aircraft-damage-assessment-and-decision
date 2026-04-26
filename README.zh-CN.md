@@ -203,22 +203,22 @@ theta_d in R^(12 x 1)，每个分量通常取值在 [0, 1]
 
 项目使用一个简化名义预测器来估计飞行器在“相对健康”情况下本来应该怎么飞：
 
-- `functions/predict_nominal_response.m`
+- `functions/dynamics/predict_nominal_response.m`
 
 它不是严格意义上的最优观测器。  
 它更像是在问：
 
-> “飞机同志，你正常情况下应该这样飞。你现在为什么突然有自己的想法了？” 🤨
+> “飞机同志,你正常情况下应该这样飞。你现在为什么突然有自己的想法了？” 🤨
 
 ### 5.2 残差生成与滤波
 
 残差生成函数：
 
-- `functions/compute_sensor_residuals.m`
+- `functions/dynamics/compute_sensor_residuals.m`
 
 残差滤波函数：
 
-- `functions/filter_residual_sequence.m`
+- `functions/dynamics/filter_residual_sequence.m`
 
 当前残差通道包括：
 
@@ -232,7 +232,7 @@ theta_d in R^(12 x 1)，每个分量通常取值在 [0, 1]
 
 特征构造入口：
 
-- `functions/build_identifier_features.m`
+- `functions/identifier/build_identifier_features.m`
 
 代表性的特征模式包括：
 
@@ -249,9 +249,9 @@ theta_d in R^(12 x 1)，每个分量通常取值在 [0, 1]
 
 核心训练与推理函数：
 
-- `functions/get_identifier_model_config.m`
-- `functions/train_damage_identifier.m`
-- `functions/run_damage_identifier.m`
+- `functions/identifier/get_identifier_model_config.m`
+- `functions/identifier/train_damage_identifier.m`
+- `functions/identifier/run_damage_identifier.m`
 
 当前支持的模型类型包括：
 
@@ -270,9 +270,9 @@ eta_hat = [eta_roll_hat, eta_pitch_hat, eta_yaw_hat, eta_total_hat]
 
 核心评估链路：
 
-- `functions/compute_control_authority_metrics.m`
-- `functions/evaluate_trim_feasibility.m`
-- `functions/decision_manager.m`
+- `functions/decision/compute_control_authority_metrics.m`
+- `functions/decision/evaluate_trim_feasibility.m`
+- `functions/decision/decision_manager.m`
 
 决策模式包括：
 
@@ -384,16 +384,38 @@ eta_hat = [eta_roll_hat, eta_pitch_hat, eta_yaw_hat, eta_total_hat]
   Simulink 主模型及其接口子系统。
 
 - `functions/`  
-  损伤语义、预测、残差处理、特征构造、识别、可控性评估与决策逻辑。
+  按职责划分的库函数子目录:
+  - `functions/utils/` — 通用小工具(`clamp`、`save_figure`、
+    `get_project_params`、`project_root`、`denormalize_targets`、
+    `scenario_damage_severity`)。
+  - `functions/dynamics/` — 物理层:`predict_nominal_response`、
+    `compute_sensor_residuals`、`filter_residual_sequence`、
+    `parse_damage_vector`、`map_damage_to_aero_effects`、
+    `damage_injection_interface`、`build_flight_condition`。
+  - `functions/identifier/` — 特征构造、训练与推理:
+    `build_identifier_features`、`train_damage_identifier`、
+    `run_damage_identifier`、`simulate_identifier_timeseries`、
+    `get_identifier_model_config`、`get_identifier_target_config`。
+  - `functions/decision/` — 可控性指标、配平可行性、决策管理器、
+    在线评估流水线。
+  - `functions/simulink_bridges/` — Simulink Interpreted MATLAB Function
+    桥接函数(`damage_output_vector`、`decision_command_vector`、
+    `online_identifier_placeholder_vector`、
+    `simple_aircraft_force_moment_model`、`visualization_mode_proxy`)。
+  - `functions/scenarios/` — 跨脚本共享的场景构造函数。
 
 - `scripts/`  
-  数据生成、训练、评估、验证、可视化和图表导出的入口脚本。
+  数据生成、训练、评估、验证、可视化、图表导出的入口脚本,
+  外加 `build_main_model`(Simulink 模型布线)。
 
 - `data/`  
-  研究用数据集。
+  研究用数据集。该目录下的 `.mat` 文件已不再随 git 跟踪,
+  本地缺失时执行 `generate_identifier_dataset` 即可重建。
 
 - `results/`  
-  图表、benchmark 输出、汇总表和闭环评估产物。
+  图表、benchmark 输出、汇总表和闭环评估产物。绝大部分内容由分析脚本
+  自动生成,已被 git 忽略;`results/demo_figures/` 是 README 嵌入的
+  精选 demo 图片,会随仓库一起跟踪。
 
 - `docs/`  
   更详细的文档与流程图 Markdown 源文件。
@@ -537,4 +559,4 @@ export_model_snapshots
 
 那这个仓库会说：
 
-> “这是代码、数据、图表、流程、决策、后果，以及一小撮航空航天风味的存在主义。” 🚀
+> “这是我的代码😊"

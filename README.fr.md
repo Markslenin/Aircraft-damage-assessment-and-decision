@@ -207,7 +207,7 @@ Ce vecteur est la source de tout le drame numérique du projet, ce qui a au moin
 
 Le projet utilise un prédicteur nominal simplifié pour estimer ce que l'avion **aurait dû faire** s'il était resté à peu près sain :
 
-- `functions/predict_nominal_response.m`
+- `functions/dynamics/predict_nominal_response.m`
 
 Ce n'est pas un observateur optimal rigoureux.  
 C'est plutôt l'équivalent de :
@@ -218,11 +218,11 @@ C'est plutôt l'équivalent de :
 
 Les résidus sont générés par :
 
-- `functions/compute_sensor_residuals.m`
+- `functions/dynamics/compute_sensor_residuals.m`
 
 Le filtrage des résidus est géré par :
 
-- `functions/filter_residual_sequence.m`
+- `functions/dynamics/filter_residual_sequence.m`
 
 Les canaux résiduels actuels incluent :
 
@@ -236,7 +236,7 @@ Les canaux résiduels actuels incluent :
 
 Point d'entrée de construction des caractéristiques :
 
-- `functions/build_identifier_features.m`
+- `functions/identifier/build_identifier_features.m`
 
 Modes représentatifs :
 
@@ -253,9 +253,9 @@ Modes représentatifs :
 
 Fonctions principales d'entraînement et d'inférence :
 
-- `functions/get_identifier_model_config.m`
-- `functions/train_damage_identifier.m`
-- `functions/run_damage_identifier.m`
+- `functions/identifier/get_identifier_model_config.m`
+- `functions/identifier/train_damage_identifier.m`
+- `functions/identifier/run_damage_identifier.m`
 
 Familles de modèles actuellement disponibles :
 
@@ -274,9 +274,9 @@ eta_hat = [eta_roll_hat, eta_pitch_hat, eta_yaw_hat, eta_total_hat]
 
 Chaîne centrale d'évaluation :
 
-- `functions/compute_control_authority_metrics.m`
-- `functions/evaluate_trim_feasibility.m`
-- `functions/decision_manager.m`
+- `functions/decision/compute_control_authority_metrics.m`
+- `functions/decision/evaluate_trim_feasibility.m`
+- `functions/decision/decision_manager.m`
 
 Modes de décision :
 
@@ -389,16 +389,40 @@ Les graphiques statistiques complémentaires restent dans `results/figures/`; le
   Modèle Simulink principal et interfaces de sous-systèmes.
 
 - `functions/`  
-  Sémantique du dommage, prédiction, traitement des résidus, construction des caractéristiques, identification, évaluation de la contrôlabilité et logique de décision.
+  Bibliothèque de fonctions, organisée par responsabilité :
+  - `functions/utils/` — petits utilitaires réutilisables (`clamp`,
+    `save_figure`, `get_project_params`, `project_root`,
+    `denormalize_targets`, `scenario_damage_severity`).
+  - `functions/dynamics/` — couche physique : `predict_nominal_response`,
+    `compute_sensor_residuals`, `filter_residual_sequence`,
+    `parse_damage_vector`, `map_damage_to_aero_effects`,
+    `damage_injection_interface`, `build_flight_condition`.
+  - `functions/identifier/` — caractéristiques, entraînement et inférence :
+    `build_identifier_features`, `train_damage_identifier`,
+    `run_damage_identifier`, `simulate_identifier_timeseries`,
+    `get_identifier_model_config`, `get_identifier_target_config`.
+  - `functions/decision/` — métriques de contrôlabilité, faisabilité de
+    l'équilibrage, gestionnaire de décision, pipeline d'évaluation en ligne.
+  - `functions/simulink_bridges/` — fonctions appelées depuis les blocs
+    Interpreted MATLAB Function du modèle Simulink (`damage_output_vector`,
+    `decision_command_vector`, `online_identifier_placeholder_vector`,
+    `simple_aircraft_force_moment_model`, `visualization_mode_proxy`).
+  - `functions/scenarios/` — constructeurs de scénarios partagés.
 
 - `scripts/`  
-  Points d'entrée pour génération de données, entraînement, évaluation, validation, visualisation et export de diagrammes.
+  Points d'entrée pour génération de données, entraînement, évaluation,
+  validation, visualisation, export de diagrammes et (`build_main_model`)
+  câblage du modèle Simulink.
 
 - `data/`  
-  Jeux de données de recherche générés.
+  Jeux de données de recherche. Les `.mat` ne sont plus suivis par git ;
+  exécuter `generate_identifier_dataset` pour les régénérer localement.
 
 - `results/`  
-  Figures, sorties benchmark, résumés et artefacts d'évaluation en boucle fermée.
+  Figures, sorties benchmark, résumés et artefacts d'évaluation en boucle
+  fermée. La majorité du contenu est régénéré par les scripts d'analyse et
+  ignoré par git ; `results/demo_figures/` est l'ensemble curé que le
+  README intègre.
 
 - `docs/`  
   Documentation détaillée et sources markdown des diagrammes.
