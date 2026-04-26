@@ -441,6 +441,57 @@ Regeneration scripts:
 - `scripts/generate_architecture_diagrams.m`
 - `scripts/generate_presentation_diagrams.m`
 
+### Current Demo Timeline and Results
+
+The current demo scenario flow is staged as:
+
+```text
+normal flight -> damage injection -> identifier assessment -> decision command -> exported figures
+```
+
+Current timing assumptions:
+- normal flight: `0.0 s` to `3.0 s`
+- damage starts: `3.0 s`
+- damage ramp: `3.0 s` to `4.0 s`
+- assessment / decision command: `5.0 s`
+
+The demo was regenerated on 2026-04-26 after the trajectory predictor update. The nominal predictor now integrates position in NED coordinates after body-to-NED velocity rotation and applies engineering bounds to avoid nonphysical trajectory blow-up.
+
+| Scenario | Decision | `eta_total` | Confidence | Oracle match | Damage time | Decision time | Altitude range | Speed range |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `MildWingReturn` | `RETURN` | 0.985 | 0.769 | yes | 3.0 s | 5.0 s | 617.031-1000.035 m | 32.000-91.234 m/s |
+| `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | yes | 3.0 s | 5.0 s | 610.082-800.140 m | 31.654-57.238 m/s |
+| `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | yes | 3.0 s | 5.0 s | 175.968-400.095 m | 29.009-73.579 m/s |
+
+Generated demo artifacts:
+- `results/demo_figures/MildWingReturn_trajectory3d.png`
+- `results/demo_figures/MildWingReturn_assessment.png`
+- `results/demo_figures/CompoundDivert_trajectory3d.png`
+- `results/demo_figures/CompoundDivert_assessment.png`
+- `results/demo_figures/SevereEgress_trajectory3d.png`
+- `results/demo_figures/SevereEgress_assessment.png`
+
+### Current P3.5 Experiment Summary
+
+The current P3.5 artifact set reports:
+
+| Metric | Value |
+| --- | ---: |
+| Best sweep configuration | `ridge + normalized_summary + moving_average` |
+| Best `eta_total` MAE | 0.0247 |
+| Best sweep decision match rate | 100% |
+| Identifier `eta_total` test MAE | 0.0247 |
+| Identifier `eta_total` test RMSE | 0.0377 |
+| Closed-loop decision mode match rate | 100% |
+| Unsafe undertrigger count | 0 |
+| Dangerous mismatch count | 0 |
+
+Primary result files:
+- `results/identifier_hyperparam_sweep_summary.csv`
+- `results/identifier_eval_summary.csv`
+- `results/decision_consistency_v2_summary.csv`
+- `results/decision_sensitivity_summary.csv`
+
 ### Model Snapshots
 
 Snapshot export script:
