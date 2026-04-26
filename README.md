@@ -306,53 +306,38 @@ Typical figure folders include:
 In research terms: reproducible artifacts.  
 In human terms: pretty pictures proving the code did not simply free-associate under pressure. ✅
 
-### 6.4 Current Demo Timeline and Results
+### 6.4 Current Demo Snapshot
 
-The current demo now follows the intended chain:
+The demo timeline is now explicit:
 
 ```text
-normal flight -> damage injection -> identification / assessment -> decision command
+0-3 s normal flight -> 3-4 s damage ramp -> 5 s assessment / decision
 ```
 
-Timing assumptions:
+The 2026-04-26 run uses NED position integration and bounded predictor states, so the trajectory stays in physical scale instead of exploding into numerical theater.
 
-- normal flight: `0.0 s` to `3.0 s`
-- damage starts: `3.0 s`
-- damage ramp: `3.0 s` to `4.0 s`
-- assessment / decision command: `5.0 s`
+| Scenario | Decision | `eta_total` | Confidence | Oracle match |
+| --- | --- | ---: | ---: | ---: |
+| `MildWingReturn` | `RETURN` | 0.985 | 0.769 | yes |
+| `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | yes |
+| `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | yes |
 
-The demo was regenerated on 2026-04-26 after the trajectory predictor update. Position is now integrated in NED coordinates after body-to-NED velocity rotation, with engineering bounds to prevent nonphysical trajectory blow-up.
+### 6.5 Result Figures and P3.5 Summary
 
-| Scenario | Decision | `eta_total` | Confidence | Oracle match | Damage time | Decision time | Altitude range | Speed range |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `MildWingReturn` | `RETURN` | 0.985 | 0.769 | yes | 3.0 s | 5.0 s | 617.031-1000.035 m | 32.000-91.234 m/s |
-| `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | yes | 3.0 s | 5.0 s | 610.082-800.140 m | 31.654-57.238 m/s |
-| `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | yes | 3.0 s | 5.0 s | 175.968-400.095 m | 29.009-73.579 m/s |
+![Decision mode distribution](./results/figures/decision_mode_distribution.png)
 
-Updated block diagrams:
+![Severity vs eta total](./results/figures/severity_vs_eta_total.png)
 
-- `docs/system_architecture.md`
-- `docs/program_flow.md`
-
-### 6.5 Current P3.5 Experiment Summary
+![Trim feasibility statistics](./results/figures/trim_feasibility_statistics.png)
 
 | Metric | Value |
 | --- | ---: |
 | Best sweep configuration | `ridge + normalized_summary + moving_average` |
-| Best `eta_total` MAE | 0.0247 |
-| Best sweep decision match rate | 100% |
-| Identifier `eta_total` test MAE | 0.0247 |
-| Identifier `eta_total` test RMSE | 0.0377 |
-| Closed-loop decision mode match rate | 100% |
-| Unsafe undertrigger count | 0 |
-| Dangerous mismatch count | 0 |
+| `eta_total` test MAE / RMSE | 0.0247 / 0.0377 |
+| Closed-loop decision match rate | 100% |
+| Unsafe undertrigger / dangerous mismatch | 0 / 0 |
 
-Primary result files:
-
-- `results/identifier_hyperparam_sweep_summary.csv`
-- `results/identifier_eval_summary.csv`
-- `results/decision_consistency_v2_summary.csv`
-- `results/decision_sensitivity_summary.csv`
+See also `docs/system_architecture.md`, `docs/program_flow.md`, and the CSV summaries under `results/`.
 
 ---
 

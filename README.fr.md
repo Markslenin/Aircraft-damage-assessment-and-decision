@@ -307,53 +307,38 @@ Répertoires de figures fréquents :
 En termes académiques : artefacts reproductibles.  
 En termes humains : jolies images prouvant que le code n'a pas improvisé sous pression. ✅
 
-### 6.4 Chronologie de démonstration et résultats actuels
+### 6.4 Instantané de démonstration actuel
 
-La démonstration actuelle suit maintenant la chaîne prévue :
+La chronologie de démonstration est maintenant explicite :
 
 ```text
-vol normal -> injection du dommage -> identification / évaluation -> commande de décision
+0-3 s vol normal -> 3-4 s rampe de dommage -> 5 s évaluation / décision
 ```
 
-Hypothèses temporelles :
+La passe du 2026-04-26 utilise l'intégration NED et des bornes sur le prédicteur, ce qui garde la trajectoire à une échelle physique au lieu de partir en théâtre numérique.
 
-- vol normal : de `0.0 s` à `3.0 s`
-- début du dommage : `3.0 s`
-- rampe de dommage : de `3.0 s` à `4.0 s`
-- évaluation / commande de décision : `5.0 s`
+| Scénario | Décision | `eta_total` | Confiance | Oracle |
+| --- | --- | ---: | ---: | ---: |
+| `MildWingReturn` | `RETURN` | 0.985 | 0.769 | oui |
+| `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | oui |
+| `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | oui |
 
-La démonstration a été régénérée le 2026-04-26 après la mise à jour du prédicteur de trajectoire. La position est désormais intégrée dans le repère NED après rotation de la vitesse corps vers NED, avec des bornes d'ingénierie pour éviter les divergences non physiques.
+### 6.5 Figures de résultats et résumé P3.5
 
-| Scénario | Décision | `eta_total` | Confiance | Correspondance oracle | Temps dommage | Temps décision | Plage altitude | Plage vitesse |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `MildWingReturn` | `RETURN` | 0.985 | 0.769 | oui | 3.0 s | 5.0 s | 617.031-1000.035 m | 32.000-91.234 m/s |
-| `CompoundDivert` | `DIVERT` | 0.622 | 0.433 | oui | 3.0 s | 5.0 s | 610.082-800.140 m | 31.654-57.238 m/s |
-| `SevereEgress` | `UNRECOVERABLE` | 0.389 | 0.352 | oui | 3.0 s | 5.0 s | 175.968-400.095 m | 29.009-73.579 m/s |
+![Distribution des modes de décision](./results/figures/decision_mode_distribution.png)
 
-Diagrammes mis à jour :
+![Sévérité vs eta_total](./results/figures/severity_vs_eta_total.png)
 
-- `docs/system_architecture.md`
-- `docs/program_flow.md`
-
-### 6.5 Résumé expérimental P3.5 actuel
+![Statistiques de faisabilité du trim](./results/figures/trim_feasibility_statistics.png)
 
 | Métrique | Valeur |
 | --- | ---: |
 | Meilleure configuration du sweep | `ridge + normalized_summary + moving_average` |
-| Meilleur MAE `eta_total` | 0.0247 |
-| Taux de correspondance décision du sweep | 100% |
-| MAE test `eta_total` de l'identificateur | 0.0247 |
-| RMSE test `eta_total` de l'identificateur | 0.0377 |
-| Taux de correspondance des modes en boucle fermée | 100% |
-| Nombre d'unsafe undertrigger | 0 |
-| Nombre de dangerous mismatch | 0 |
+| MAE / RMSE test `eta_total` | 0.0247 / 0.0377 |
+| Correspondance des décisions en boucle fermée | 100% |
+| Unsafe undertrigger / dangerous mismatch | 0 / 0 |
 
-Fichiers de résultats principaux :
-
-- `results/identifier_hyperparam_sweep_summary.csv`
-- `results/identifier_eval_summary.csv`
-- `results/decision_consistency_v2_summary.csv`
-- `results/decision_sensitivity_summary.csv`
+Voir aussi `docs/system_architecture.md`, `docs/program_flow.md` et les résumés CSV dans `results/`.
 
 ---
 
